@@ -1,6 +1,8 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:provider/provider.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'providers/corso_provider.dart';
 import 'providers/esame_provider.dart';
 import 'providers/obiettivo_provider.dart';
@@ -9,10 +11,17 @@ import 'services/database_helper.dart';
 
 /// Entry point dell'applicazione Study Planner & Exam Tracker.
 ///
-/// Inizializza il database SQLite, configura i Provider per la gestione
-/// dello stato e avvia l'app con un tema Material 3 moderno.
+/// Inizializza il database SQLite (con FFI su desktop),
+/// configura i Provider e avvia l'app con tema Material 3.
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Inizializza sqflite FFI per piattaforme desktop (Windows/Linux/macOS).
+  // Su Android/iOS sqflite funziona nativamente.
+  if (!kIsWeb) {
+    sqfliteFfiInit();
+    databaseFactory = databaseFactoryFfi;
+  }
 
   // Inizializza il database SQLite
   await DatabaseHelper.instance.database;
