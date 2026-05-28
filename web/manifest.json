@@ -1,6 +1,6 @@
 {
-    "name": "study_planner",
-    "short_name": "study_planner",
+    "name": "Study Planner",
+    "short_name": "Study Planner",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

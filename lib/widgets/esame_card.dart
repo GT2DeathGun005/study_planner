@@ -4,7 +4,8 @@ import '../models/esame.dart';
 
 /// Card per visualizzare un esame nella lista.
 ///
-/// Mostra titolo, data, tipologia, priorità con colore, stato e voto.
+/// Mostra titolo, data, tipologia, priorità con colore, stato, voto
+/// e peso percentuale.
 class EsameCard extends StatelessWidget {
   final Esame esame;
   final String? nomeCorso;
@@ -38,8 +39,6 @@ class EsameCard extends StatelessWidget {
         return Colors.blue;
       case 'completato':
         return Colors.green;
-      case 'annullato':
-        return Colors.grey;
       default:
         return Colors.grey;
     }
@@ -85,9 +84,6 @@ class EsameCard extends StatelessWidget {
                           esame.titolo,
                           style: theme.textTheme.titleMedium?.copyWith(
                             fontWeight: FontWeight.w600,
-                            decoration: esame.stato == 'annullato'
-                                ? TextDecoration.lineThrough
-                                : null,
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -138,6 +134,24 @@ class EsameCard extends StatelessWidget {
                       style: theme.textTheme.labelSmall,
                     ),
                   ),
+                  const SizedBox(width: 8),
+                  // Peso percentuale
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.primaryContainer
+                          .withValues(alpha: 0.5),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      '${esame.pesoPercentuale}%',
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: theme.colorScheme.onPrimaryContainer,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
                   const Spacer(),
                   Container(
                     padding:
@@ -170,6 +184,13 @@ class EsameCard extends StatelessWidget {
                         fontWeight: FontWeight.w600,
                         color:
                             esame.superato ? Colors.amber[700] : Colors.red,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      '(${esame.puntiPonderati.toStringAsFixed(1)} punti)',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
                       ),
                     ),
                   ],

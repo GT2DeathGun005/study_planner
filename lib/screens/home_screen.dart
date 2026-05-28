@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../providers/corso_provider.dart';
+import '../providers/esame_provider.dart';
+import '../providers/obiettivo_provider.dart';
 import 'esami/esami_screen.dart';
 import 'obiettivi/obiettivi_screen.dart';
 import 'calendario/calendario_screen.dart';
 import 'profilo/profilo_screen.dart';
 
-/// Schermata principale con BottomNavigationBar a 4 tab.
-///
-/// Gestisce la navigazione tra le 4 macro-sezioni dell'app:
-/// Esami, Obiettivi, Calendario e Profilo/Analytics.
+
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -38,12 +39,14 @@ class _HomeScreenState extends State<HomeScreen> {
           setState(() {
             _currentIndex = index;
           });
+
+          _reloadProviders();
         },
         destinations: const [
           NavigationDestination(
             icon: Icon(Icons.school_outlined),
             selectedIcon: Icon(Icons.school),
-            label: 'Esami',
+            label: 'Corsi',
           ),
           NavigationDestination(
             icon: Icon(Icons.flag_outlined),
@@ -63,5 +66,12 @@ class _HomeScreenState extends State<HomeScreen> {
         ],
       ),
     );
+  }
+
+
+  void _reloadProviders() {
+    context.read<CorsoProvider>().loadCorsi();
+    context.read<EsameProvider>().loadEsami();
+    context.read<ObiettivoProvider>().loadObiettivi();
   }
 }

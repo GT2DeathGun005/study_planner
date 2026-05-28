@@ -3,16 +3,19 @@ import '../models/corso.dart';
 
 /// Card per visualizzare un corso nella lista.
 ///
-/// Mostra nome, docente, CFU, semestre e badge con lo stato.
+/// Mostra nome, docente, CFU, semestre, tipo laurea/anno e badge con lo stato.
+/// Il voto calcolato viene passato come parametro opzionale.
 /// Supporta tap per navigare al dettaglio e long-press per azioni.
 class CorsoCard extends StatelessWidget {
   final Corso corso;
+  final double? votoCalcolato;
   final VoidCallback? onTap;
   final VoidCallback? onDelete;
 
   const CorsoCard({
     super.key,
     required this.corso,
+    this.votoCalcolato,
     this.onTap,
     this.onDelete,
   });
@@ -124,6 +127,11 @@ class CorsoCard extends StatelessWidget {
                     icon: Icons.calendar_today,
                     label: '${corso.semestre}° Sem.',
                   ),
+                  const SizedBox(width: 8),
+                  _InfoChip(
+                    icon: Icons.workspace_premium,
+                    label: '${Corso.tipoLaureaLabel(corso.tipoLaurea)[0]}${corso.anno}',
+                  ),
                   const Spacer(),
                   Container(
                     padding:
@@ -142,14 +150,14 @@ class CorsoCard extends StatelessWidget {
                   ),
                 ],
               ),
-              if (corso.votoOttenuto != null) ...[
+              if (votoCalcolato != null && votoCalcolato! > 0) ...[
                 const SizedBox(height: 8),
                 Row(
                   children: [
                     Icon(Icons.grade, size: 16, color: Colors.amber[700]),
                     const SizedBox(width: 4),
                     Text(
-                      'Voto: ${corso.votoOttenuto}/30',
+                      'Voto: ${votoCalcolato!.toStringAsFixed(1)}/30',
                       style: theme.textTheme.bodySmall?.copyWith(
                         fontWeight: FontWeight.w600,
                         color: Colors.amber[700],

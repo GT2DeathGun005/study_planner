@@ -24,9 +24,10 @@ class _CorsoFormScreenState extends State<CorsoFormScreen> {
   late final TextEditingController _descrizioneController;
   late final TextEditingController _materialiController;
   late final TextEditingController _votoPrevistoController;
-  late final TextEditingController _votoOttenutoController;
   late int _semestre;
   late String _stato;
+  late String _tipoLaurea;
+  late int _anno;
 
   bool get isEditing => widget.corso != null;
 
@@ -42,10 +43,10 @@ class _CorsoFormScreenState extends State<CorsoFormScreen> {
     _materialiController = TextEditingController(text: c?.materiali ?? '');
     _votoPrevistoController =
         TextEditingController(text: c?.votoPrevisto?.toString() ?? '');
-    _votoOttenutoController =
-        TextEditingController(text: c?.votoOttenuto?.toString() ?? '');
     _semestre = c?.semestre ?? 1;
     _stato = c?.stato ?? 'da_iniziare';
+    _tipoLaurea = c?.tipoLaurea ?? 'triennale';
+    _anno = c?.anno ?? 1;
   }
 
   @override
@@ -56,7 +57,6 @@ class _CorsoFormScreenState extends State<CorsoFormScreen> {
     _descrizioneController.dispose();
     _materialiController.dispose();
     _votoPrevistoController.dispose();
-    _votoOttenutoController.dispose();
     super.dispose();
   }
 
@@ -94,6 +94,59 @@ class _CorsoFormScreenState extends State<CorsoFormScreen> {
                 ),
                 validator: (v) =>
                     v == null || v.trim().isEmpty ? 'Campo obbligatorio' : null,
+              ),
+              const SizedBox(height: 16),
+
+              // Tipo Laurea e Anno
+              Row(
+                children: [
+                  Expanded(
+                    child: DropdownButtonFormField<String>(
+                      initialValue: _tipoLaurea,
+                      decoration: const InputDecoration(
+                        labelText: 'Tipo Laurea',
+                        prefixIcon: Icon(Icons.workspace_premium),
+                      ),
+                      items: Corso.tipiLaureaDisponibili.map((tipo) {
+                        return DropdownMenuItem(
+                          value: tipo,
+                          child: Text(Corso.tipoLaureaLabel(tipo)),
+                        );
+                      }).toList(),
+                      onChanged: (v) {
+                        if (v != null) {
+                          setState(() {
+                            _tipoLaurea = v;
+                            // Reset anno se non valido per il nuovo tipo
+                            final anniValidi = Corso.anniPerTipo(v);
+                            if (!anniValidi.contains(_anno)) {
+                              _anno = 1;
+                            }
+                          });
+                        }
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: DropdownButtonFormField<int>(
+                      initialValue: _anno,
+                      decoration: const InputDecoration(
+                        labelText: 'Anno',
+                        prefixIcon: Icon(Icons.looks_one),
+                      ),
+                      items: Corso.anniPerTipo(_tipoLaurea).map((a) {
+                        return DropdownMenuItem(
+                          value: a,
+                          child: Text('$a° Anno'),
+                        );
+                      }).toList(),
+                      onChanged: (v) {
+                        if (v != null) setState(() => _anno = v);
+                      },
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 16),
 
@@ -181,49 +234,23 @@ class _CorsoFormScreenState extends State<CorsoFormScreen> {
               ),
               const SizedBox(height: 16),
 
-              // Voti in riga
-              Row(
-                children: [
-                  Expanded(
-                    child: TextFormField(
-                      controller: _votoPrevistoController,
-                      decoration: const InputDecoration(
-                        labelText: 'Voto previsto',
-                        prefixIcon: Icon(Icons.trending_up),
-                      ),
-                      keyboardType: TextInputType.number,
-                      validator: (v) {
-                        if (v != null && v.isNotEmpty) {
-                          final n = int.tryParse(v);
-                          if (n == null || n < 18 || n > 30) {
-                            return '18-30';
-                          }
-                        }
-                        return null;
-                      },
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: TextFormField(
-                      controller: _votoOttenutoController,
-                      decoration: const InputDecoration(
-                        labelText: 'Voto ottenuto',
-                        prefixIcon: Icon(Icons.grade),
-                      ),
-                      keyboardType: TextInputType.number,
-                      validator: (v) {
-                        if (v != null && v.isNotEmpty) {
-                          final n = int.tryParse(v);
-                          if (n == null || n < 18 || n > 30) {
-                            return '18-30';
-                          }
-                        }
-                        return null;
-                      },
-                    ),
-                  ),
-                ],
+              // Voto previsto
+              TextFormField(
+                controller: _votoPrevistoController,
+                decoration: const InputDecoration(
+                  labelText: 'Voto previsto (obiettivo)',
+                  prefixIcon: Icon(Icons.trending_up),
+                ),
+                keyboardType: TextInputType.number,
+                validator: (v) {
+                  if (v != null && v.isNotEmpty) {
+                    final n = int.tryParse(v);
+                    if (n == null || n < 18 || n > 30) {
+                      return '18-30';
+                    }
+                  }
+                  return null;
+                },
               ),
 
               const SizedBox(height: 32),
@@ -252,7 +279,6 @@ class _CorsoFormScreenState extends State<CorsoFormScreen> {
 
     final provider = context.read<CorsoProvider>();
     final votoPrevisto = int.tryParse(_votoPrevistoController.text);
-    final votoOttenuto = int.tryParse(_votoOttenutoController.text);
 
     if (isEditing) {
       final updated = widget.corso!.copyWith(
@@ -262,10 +288,10 @@ class _CorsoFormScreenState extends State<CorsoFormScreen> {
         cfu: int.parse(_cfuController.text.trim()),
         descrizione: _descrizioneController.text.trim(),
         stato: _stato,
+        tipoLaurea: _tipoLaurea,
+        anno: _anno,
         votoPrevisto: votoPrevisto,
         clearVotoPrevisto: _votoPrevistoController.text.isEmpty,
-        votoOttenuto: votoOttenuto,
-        clearVotoOttenuto: _votoOttenutoController.text.isEmpty,
         materiali: _materialiController.text.trim(),
       );
       provider.updateCorso(updated);
@@ -277,8 +303,9 @@ class _CorsoFormScreenState extends State<CorsoFormScreen> {
         cfu: int.parse(_cfuController.text.trim()),
         descrizione: _descrizioneController.text.trim(),
         stato: _stato,
+        tipoLaurea: _tipoLaurea,
+        anno: _anno,
         votoPrevisto: votoPrevisto,
-        votoOttenuto: votoOttenuto,
         materiali: _materialiController.text.trim(),
       );
     }

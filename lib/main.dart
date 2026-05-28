@@ -1,5 +1,7 @@
+import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:provider/provider.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
@@ -9,24 +11,20 @@ import 'providers/obiettivo_provider.dart';
 import 'screens/home_screen.dart';
 import 'services/database_helper.dart';
 
-/// Entry point dell'applicazione Study Planner & Exam Tracker.
-///
-/// Inizializza il database SQLite (con FFI su desktop),
-/// configura i Provider e avvia l'app con tema Material 3.
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Inizializza sqflite FFI per piattaforme desktop (Windows/Linux/macOS).
-  // Su Android/iOS sqflite funziona nativamente.
-  if (!kIsWeb) {
+  // FFI solo su desktop
+  if (!kIsWeb && (Platform.isWindows || Platform.isLinux || Platform.isMacOS)) {
     sqfliteFfiInit();
     databaseFactory = databaseFactoryFfi;
   }
 
-  // Inizializza il database SQLite
+
   await DatabaseHelper.instance.database;
 
-  // Inizializza le date in italiano per intl/table_calendar
+
   await initializeDateFormatting('it_IT', null);
 
   runApp(const StudyPlannerApp());
@@ -46,7 +44,18 @@ class StudyPlannerApp extends StatelessWidget {
       child: MaterialApp(
         title: 'Study Planner',
         debugShowCheckedModeBanner: false,
-        // Tema Material 3 con palette indigo/deep purple
+
+        localizationsDelegates: const [
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        supportedLocales: const [
+          Locale('it', 'IT'),
+          Locale('en', 'US'),
+        ],
+        locale: const Locale('it', 'IT'),
+
         theme: ThemeData(
           colorSchemeSeed: Colors.indigo,
           useMaterial3: true,

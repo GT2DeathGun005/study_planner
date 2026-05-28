@@ -1,7 +1,8 @@
 /// Modello dati per un Esame o scadenza accademica.
 ///
 /// Rappresenta un esame, appello, consegna o altra scadenza
-/// associata a un corso specifico.
+/// associata a un corso specifico. Include un peso percentuale
+/// che indica quanto l'esame incide sul voto finale del corso.
 class Esame {
   final String id;
   final String titolo;
@@ -9,8 +10,9 @@ class Esame {
   final DateTime data;
   final String tipologia; // scritto, orale, progetto, consegna, altro
   final String priorita; // alta, media, bassa
-  final String stato; // programmato, completato, annullato
+  final String stato; // programmato, completato
   final int? voto;
+  final int pesoPercentuale; // 0-100, peso sul voto finale del corso
   final String note;
   final DateTime createdAt;
 
@@ -23,6 +25,7 @@ class Esame {
     this.priorita = 'media',
     this.stato = 'programmato',
     this.voto,
+    this.pesoPercentuale = 100,
     this.note = '',
     required this.createdAt,
   });
@@ -47,7 +50,6 @@ class Esame {
   static const List<String> statiDisponibili = [
     'programmato',
     'completato',
-    'annullato',
   ];
 
   /// Label leggibile per la tipologia.
@@ -89,8 +91,6 @@ class Esame {
         return 'Programmato';
       case 'completato':
         return 'Completato';
-      case 'annullato':
-        return 'Annullato';
       default:
         return s;
     }
@@ -98,6 +98,13 @@ class Esame {
 
   /// Indica se l'esame è superato (completato con voto >= 18).
   bool get superato => stato == 'completato' && voto != null && voto! >= 18;
+
+  /// Calcola i punti ponderati: (voto * pesoPercentuale / 100).
+  /// Es: voto 30 con peso 60% = 18 punti.
+  double get puntiPonderati {
+    if (voto == null) return 0;
+    return voto! * pesoPercentuale / 100;
+  }
 
   /// Converte il modello in una Map per SQLite.
   Map<String, dynamic> toMap() {
@@ -110,6 +117,7 @@ class Esame {
       'priorita': priorita,
       'stato': stato,
       'voto': voto,
+      'peso_percentuale': pesoPercentuale,
       'note': note,
       'created_at': createdAt.toIso8601String(),
     };
@@ -126,6 +134,7 @@ class Esame {
       priorita: (map['priorita'] as String?) ?? 'media',
       stato: (map['stato'] as String?) ?? 'programmato',
       voto: map['voto'] as int?,
+      pesoPercentuale: (map['peso_percentuale'] as int?) ?? 100,
       note: (map['note'] as String?) ?? '',
       createdAt: DateTime.parse(map['created_at'] as String),
     );
@@ -142,6 +151,7 @@ class Esame {
     String? stato,
     int? voto,
     bool clearVoto = false,
+    int? pesoPercentuale,
     String? note,
     DateTime? createdAt,
   }) {
@@ -154,6 +164,7 @@ class Esame {
       priorita: priorita ?? this.priorita,
       stato: stato ?? this.stato,
       voto: clearVoto ? null : (voto ?? this.voto),
+      pesoPercentuale: pesoPercentuale ?? this.pesoPercentuale,
       note: note ?? this.note,
       createdAt: createdAt ?? this.createdAt,
     );

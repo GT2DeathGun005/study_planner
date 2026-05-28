@@ -1,37 +1,34 @@
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 
-/// Singleton per la gestione del database SQLite.
-///
-/// Si occupa dell'apertura della connessione, della creazione delle tabelle
-/// e delle migrazioni future tramite versioning.
+
 class DatabaseHelper {
   static final DatabaseHelper instance = DatabaseHelper._internal();
   static Database? _database;
 
   DatabaseHelper._internal();
 
-  /// Restituisce l'istanza del database, inizializzandola se necessario.
+
   Future<Database> get database async {
     if (_database != null) return _database!;
     _database = await _initDatabase();
     return _database!;
   }
 
-  /// Inizializza il database SQLite.
+
   Future<Database> _initDatabase() async {
     final dbPath = await getDatabasesPath();
     final path = join(dbPath, 'study_planner.db');
 
     return await openDatabase(
       path,
-      version: 1,
+      version: 2,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
     );
   }
 
-  /// Crea le tabelle al primo avvio dell'app.
+
   Future<void> _onCreate(Database db, int version) async {
     // Tabella corsi
     await db.execute('''
@@ -43,8 +40,9 @@ class DatabaseHelper {
         cfu INTEGER NOT NULL,
         descrizione TEXT DEFAULT '',
         stato TEXT DEFAULT 'da_iniziare',
+        tipo_laurea TEXT DEFAULT 'triennale',
+        anno INTEGER DEFAULT 1,
         voto_previsto INTEGER,
-        voto_ottenuto INTEGER,
         materiali TEXT DEFAULT '',
         created_at TEXT NOT NULL
       )
@@ -61,6 +59,7 @@ class DatabaseHelper {
         priorita TEXT DEFAULT 'media',
         stato TEXT DEFAULT 'programmato',
         voto INTEGER,
+        peso_percentuale INTEGER DEFAULT 100,
         note TEXT DEFAULT '',
         created_at TEXT NOT NULL,
         FOREIGN KEY (corso_id) REFERENCES corsi (id) ON DELETE CASCADE
@@ -89,12 +88,26 @@ class DatabaseHelper {
     ''');
   }
 
-  /// Gestisce le migrazioni tra versioni del database.
+
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
-    // Riservato per migrazioni future.
+    if (oldVersion < 2) {
+
+      await db.execute(
+          "ALTER TABLE corsi ADD COLUMN tipo_laurea TEXT DEFAULT 'triennale'");
+      await db.execute(
+          'ALTER TABLE corsi ADD COLUMN anno INTEGER DEFAULT 1');
+
+
+      await db.execute(
+          'ALTER TABLE esami ADD COLUMN peso_percentuale INTEGER DEFAULT 100');
+
+
+      await db.execute(
+          "UPDATE esami SET stato = 'programmato' WHERE stato = 'annullato'");
+    }
   }
 
-  /// Chiude la connessione al database.
+
   Future<void> close() async {
     final db = await database;
     db.close();

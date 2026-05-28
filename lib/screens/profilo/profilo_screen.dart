@@ -10,7 +10,8 @@ import '../../widgets/stat_card.dart';
 
 /// Schermata Profilo/Analytics.
 ///
-/// Dashboard con KPI, grafici e scadenze imminenti.
+/// Dashboard con KPI, grafici, medie separate per Triennale/Magistrale,
+/// e scadenze imminenti.
 class ProfiloScreen extends StatefulWidget {
   const ProfiloScreen({super.key});
   @override
@@ -40,13 +41,26 @@ class _ProfiloScreenState extends State<ProfiloScreen> {
           final totCorsi = corsoProv.tuttiCorsi.length;
           final esamiSuperati = esameProv.esamiSuperati.length;
           final totEsami = esameProv.esami.length;
-          final media = esameProv.mediaVoti;
           final taskCompletati = obiProv.completati;
           final totTask = obiProv.tuttiObiettivi.length;
           final tempoEffettivo = obiProv.totaleTempoEffettivo;
           final tempoStimato = obiProv.totaleTempoStimato;
           final tempoPerCorso = obiProv.tempoPerCorso;
           final scadenze = esameProv.scadenzeImminenti;
+
+          // Calcola medie separate per Triennale e Magistrale
+          final corsiTriennale = corsoProv.tuttiCorsi
+              .where((c) => c.tipoLaurea == 'triennale')
+              .toList();
+          final corsiMagistrale = corsoProv.tuttiCorsi
+              .where((c) => c.tipoLaurea == 'magistrale')
+              .toList();
+          final idsTriennale = corsiTriennale.map((c) => c.id).toList();
+          final idsMagistrale = corsiMagistrale.map((c) => c.id).toList();
+          final mediaTriennale =
+              esameProv.mediaVotiPerTipoLaurea('triennale', idsTriennale);
+          final mediaMagistrale =
+              esameProv.mediaVotiPerTipoLaurea('magistrale', idsMagistrale);
 
           return ListView(
             padding: const EdgeInsets.all(16),
@@ -58,12 +72,49 @@ class _ProfiloScreenState extends State<ProfiloScreen> {
                 physics: const NeverScrollableScrollPhysics(),
                 mainAxisSpacing: 8,
                 crossAxisSpacing: 8,
-                childAspectRatio: 1.4,
+                childAspectRatio: 1.15,
                 children: [
                   StatCard(icon: Icons.school, value: '$totCorsi', label: 'Corsi totali', color: Colors.blue),
+                  StatCard(
+                    icon: Icons.grade,
+                    value: esameProv.mediaVoti > 0
+                        ? esameProv.mediaVoti.toStringAsFixed(1)
+                        : '-',
+                    label: 'Media generale',
+                    color: Colors.amber,
+                  ),
                   StatCard(icon: Icons.emoji_events, value: '$esamiSuperati/$totEsami', label: 'Esami superati', color: Colors.green),
-                  StatCard(icon: Icons.grade, value: media > 0 ? media.toStringAsFixed(1) : '-', label: 'Media voti', color: Colors.amber),
                   StatCard(icon: Icons.check_circle, value: '$taskCompletati/$totTask', label: 'Task completati', color: Colors.purple),
+                ],
+              ),
+              const SizedBox(height: 24),
+
+              // Medie per tipo di laurea
+              Text('Medie per Tipo di Laurea',
+                  style: theme.textTheme.titleMedium
+                      ?.copyWith(fontWeight: FontWeight.w600)),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    child: _MediaCard(
+                      title: 'Triennale',
+                      icon: Icons.school,
+                      media: mediaTriennale,
+                      corsiCount: corsiTriennale.length,
+                      color: Colors.indigo,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _MediaCard(
+                      title: 'Magistrale',
+                      icon: Icons.workspace_premium,
+                      media: mediaMagistrale,
+                      corsiCount: corsiMagistrale.length,
+                      color: Colors.deepPurple,
+                    ),
+                  ),
                 ],
               ),
               const SizedBox(height: 24),
@@ -199,6 +250,67 @@ class _ProfiloScreenState extends State<ProfiloScreen> {
           }).toList(),
         ),
       ],
+    );
+  }
+}
+
+/// Card per mostrare la media voti di un tipo di laurea.
+class _MediaCard extends StatelessWidget {
+  final String title;
+  final IconData icon;
+  final double media;
+  final int corsiCount;
+  final Color color;
+
+  const _MediaCard({
+    required this.title,
+    required this.icon,
+    required this.media,
+    required this.corsiCount,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: color.withValues(alpha: 0.2)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(icon, color: color, size: 20),
+                const SizedBox(width: 8),
+                Text(title,
+                    style: theme.textTheme.labelLarge
+                        ?.copyWith(fontWeight: FontWeight.w600)),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Text(
+              media > 0 ? media.toStringAsFixed(1) : '—',
+              style: theme.textTheme.headlineMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: color,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              '$corsiCount cors${corsiCount == 1 ? 'o' : 'i'}',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

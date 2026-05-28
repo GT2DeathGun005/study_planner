@@ -15,8 +15,13 @@ class CorsoProvider extends ChangeNotifier {
   bool _isLoading = false;
   String _searchQuery = '';
   String? _filtroStato;
+  int? _filtroSemestre;
+  String? _filtroTipoLaurea;
+  int? _filtroAnno;
+  int? _filtroCfuMin;
+  int? _filtroCfuMax;
 
-  /// Lista corsi filtrata in base a ricerca e stato.
+  /// Lista corsi filtrata in base a ricerca e filtri attivi.
   List<Corso> get corsi {
     var result = _corsi;
     if (_searchQuery.isNotEmpty) {
@@ -28,6 +33,22 @@ class CorsoProvider extends ChangeNotifier {
     if (_filtroStato != null) {
       result = result.where((c) => c.stato == _filtroStato).toList();
     }
+    if (_filtroSemestre != null) {
+      result = result.where((c) => c.semestre == _filtroSemestre).toList();
+    }
+    if (_filtroTipoLaurea != null) {
+      result =
+          result.where((c) => c.tipoLaurea == _filtroTipoLaurea).toList();
+    }
+    if (_filtroAnno != null) {
+      result = result.where((c) => c.anno == _filtroAnno).toList();
+    }
+    if (_filtroCfuMin != null) {
+      result = result.where((c) => c.cfu >= _filtroCfuMin!).toList();
+    }
+    if (_filtroCfuMax != null) {
+      result = result.where((c) => c.cfu <= _filtroCfuMax!).toList();
+    }
     return result;
   }
 
@@ -37,6 +58,22 @@ class CorsoProvider extends ChangeNotifier {
   bool get isLoading => _isLoading;
   String get searchQuery => _searchQuery;
   String? get filtroStato => _filtroStato;
+  int? get filtroSemestre => _filtroSemestre;
+  String? get filtroTipoLaurea => _filtroTipoLaurea;
+  int? get filtroAnno => _filtroAnno;
+  int? get filtroCfuMin => _filtroCfuMin;
+  int? get filtroCfuMax => _filtroCfuMax;
+
+  /// Numero di filtri attivi (esclusa la ricerca).
+  int get filtriAttiviCount {
+    int count = 0;
+    if (_filtroStato != null) count++;
+    if (_filtroSemestre != null) count++;
+    if (_filtroTipoLaurea != null) count++;
+    if (_filtroAnno != null) count++;
+    if (_filtroCfuMin != null || _filtroCfuMax != null) count++;
+    return count;
+  }
 
   /// Carica tutti i corsi dal database.
   Future<void> loadCorsi() async {
@@ -57,8 +94,9 @@ class CorsoProvider extends ChangeNotifier {
     required int cfu,
     String descrizione = '',
     String stato = 'da_iniziare',
+    String tipoLaurea = 'triennale',
+    int anno = 1,
     int? votoPrevisto,
-    int? votoOttenuto,
     String materiali = '',
   }) async {
     final corso = Corso(
@@ -69,8 +107,9 @@ class CorsoProvider extends ChangeNotifier {
       cfu: cfu,
       descrizione: descrizione,
       stato: stato,
+      tipoLaurea: tipoLaurea,
+      anno: anno,
       votoPrevisto: votoPrevisto,
-      votoOttenuto: votoOttenuto,
       materiali: materiali,
       createdAt: DateTime.now(),
     );
@@ -112,10 +151,47 @@ class CorsoProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Imposta il filtro per semestre.
+  void setFiltroSemestre(int? semestre) {
+    _filtroSemestre = semestre;
+    notifyListeners();
+  }
+
+  /// Imposta il filtro per tipo laurea.
+  void setFiltroTipoLaurea(String? tipoLaurea) {
+    _filtroTipoLaurea = tipoLaurea;
+    // Reset anno se il tipo laurea cambia
+    if (tipoLaurea != null && _filtroAnno != null) {
+      final anniValidi = Corso.anniPerTipo(tipoLaurea);
+      if (!anniValidi.contains(_filtroAnno)) {
+        _filtroAnno = null;
+      }
+    }
+    notifyListeners();
+  }
+
+  /// Imposta il filtro per anno.
+  void setFiltroAnno(int? anno) {
+    _filtroAnno = anno;
+    notifyListeners();
+  }
+
+  /// Imposta il filtro per range CFU.
+  void setFiltroCfu({int? min, int? max}) {
+    _filtroCfuMin = min;
+    _filtroCfuMax = max;
+    notifyListeners();
+  }
+
   /// Resetta tutti i filtri.
   void resetFiltri() {
     _searchQuery = '';
     _filtroStato = null;
+    _filtroSemestre = null;
+    _filtroTipoLaurea = null;
+    _filtroAnno = null;
+    _filtroCfuMin = null;
+    _filtroCfuMax = null;
     notifyListeners();
   }
 }

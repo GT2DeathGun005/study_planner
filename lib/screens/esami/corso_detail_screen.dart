@@ -3,13 +3,15 @@ import 'package:provider/provider.dart';
 import '../../models/corso.dart';
 import '../../providers/corso_provider.dart';
 import '../../providers/esame_provider.dart';
+import '../../providers/obiettivo_provider.dart';
 import '../../widgets/esame_card.dart';
 import 'corso_form_screen.dart';
 import 'esame_form_screen.dart';
 
 /// Schermata di dettaglio di un Corso.
 ///
-/// Mostra tutte le informazioni del corso e la lista degli esami associati.
+/// Mostra tutte le informazioni del corso, il voto calcolato dalla
+/// somma pesata degli esami, e la lista degli esami associati.
 /// Permette di modificare il corso e aggiungere nuovi esami.
 class CorsoDetailScreen extends StatefulWidget {
   final String corsoId;
@@ -43,14 +45,9 @@ class _CorsoDetailScreenState extends State<CorsoDetailScreen> {
           );
         }
 
-        final esamiCorso = esameProvider.getEsamiByDate(DateTime(1900)) 
-            .isEmpty
-            ? esameProvider.esami
-                .where((e) => e.corsoId == corso.id)
-                .toList()
-            : esameProvider.esami
-                .where((e) => e.corsoId == corso.id)
-                .toList();
+        final esamiCorso = esameProvider.getEsamiCorso(corso.id);
+        final votoCalcolato = esameProvider.calcolaVotoCorso(corso.id);
+        final pesoTotale = esameProvider.getPercentualeTotale(corso.id);
 
         return Scaffold(
           appBar: AppBar(
@@ -73,7 +70,8 @@ class _CorsoDetailScreenState extends State<CorsoDetailScreen> {
             padding: const EdgeInsets.only(bottom: 80),
             children: [
               // Info corso
-              _buildInfoSection(context, corso, theme),
+              _buildInfoSection(
+                  context, corso, theme, votoCalcolato, pesoTotale),
               const SizedBox(height: 16),
 
               // Sezione esami
@@ -91,7 +89,8 @@ class _CorsoDetailScreenState extends State<CorsoDetailScreen> {
                     Text(
                       '${esamiCorso.length} elementi',
                       style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+                        color: theme.colorScheme.onSurface
+                            .withValues(alpha: 0.5),
                       ),
                     ),
                   ],
@@ -135,28 +134,33 @@ class _CorsoDetailScreenState extends State<CorsoDetailScreen> {
                           ),
                         );
                       },
-                      onDelete: () => _confirmDeleteEsame(context, esame.id),
+                      onDelete: esame.stato == 'completato'
+                          ? null
+                          : () => _confirmDeleteEsame(context, esame.id),
                     )),
             ],
           ),
-          floatingActionButton: FloatingActionButton.extended(
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => EsameFormScreen(corsoId: corso.id),
+          floatingActionButton: pesoTotale >= 100
+              ? null
+              : FloatingActionButton.extended(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => EsameFormScreen(corsoId: corso.id),
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.add),
+                  label: const Text('Esame'),
                 ),
-              );
-            },
-            icon: const Icon(Icons.add),
-            label: const Text('Esame'),
-          ),
         );
       },
     );
   }
 
-  Widget _buildInfoSection(BuildContext context, Corso corso, ThemeData theme) {
+  Widget _buildInfoSection(BuildContext context, Corso corso, ThemeData theme,
+      double votoCalcolato, double pesoTotale) {
     return Card(
       margin: const EdgeInsets.all(16),
       elevation: 0,
@@ -182,6 +186,14 @@ class _CorsoDetailScreenState extends State<CorsoDetailScreen> {
                 label: 'Semestre',
                 value: '${corso.semestre}° Semestre'),
             _DetailRow(
+                icon: Icons.looks_one,
+                label: 'Anno',
+                value: '${corso.anno}° Anno'),
+            _DetailRow(
+                icon: Icons.workspace_premium,
+                label: 'Tipo Laurea',
+                value: Corso.tipoLaureaLabel(corso.tipoLaurea)),
+            _DetailRow(
                 icon: Icons.flag,
                 label: 'Stato',
                 value: Corso.statoLabel(corso.stato)),
@@ -190,11 +202,16 @@ class _CorsoDetailScreenState extends State<CorsoDetailScreen> {
                   icon: Icons.trending_up,
                   label: 'Voto previsto',
                   value: '${corso.votoPrevisto}/30'),
-            if (corso.votoOttenuto != null)
+            // Voto calcolato dagli esami
+            if (votoCalcolato > 0)
               _DetailRow(
                   icon: Icons.grade,
-                  label: 'Voto ottenuto',
-                  value: '${corso.votoOttenuto}/30'),
+                  label: 'Voto calcolato',
+                  value: '${votoCalcolato.toStringAsFixed(1)}/30'),
+            _DetailRow(
+                icon: Icons.percent,
+                label: 'Peso Occupato',
+                value: '${pesoTotale.toStringAsFixed(0)}%'),
             if (corso.descrizione.isNotEmpty) ...[
               const Divider(height: 24),
               Text('Descrizione',
@@ -234,6 +251,9 @@ class _CorsoDetailScreenState extends State<CorsoDetailScreen> {
           ),
           TextButton(
             onPressed: () {
+              // Elimina prima gli obiettivi associati all'esame
+              context.read<ObiettivoProvider>().deleteObiettiviByEsame(esameId);
+              // Poi elimina l'esame
               context.read<EsameProvider>().deleteEsame(esameId);
               Navigator.pop(ctx);
             },

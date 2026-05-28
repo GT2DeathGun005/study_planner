@@ -47,6 +47,8 @@ class _CalendarioScreenState extends State<CalendarioScreen> {
             children: [
               // Calendario
               TableCalendar(
+                locale: 'it_IT',
+                startingDayOfWeek: StartingDayOfWeek.monday,
                 firstDay: DateTime(2020),
                 lastDay: DateTime(2030),
                 focusedDay: _focusedDay,

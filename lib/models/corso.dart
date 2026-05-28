@@ -1,7 +1,7 @@
 /// Modello dati per un Corso universitario.
 ///
 /// Rappresenta un insegnamento con informazioni come nome, docente,
-/// semestre, CFU, stato e voti.
+/// semestre, CFU, stato, tipo di laurea e anno accademico.
 class Corso {
   final String id;
   final String nome;
@@ -10,8 +10,9 @@ class Corso {
   final int cfu;
   final String descrizione;
   final String stato; // da_iniziare, in_corso, completato, da_ripassare, superato
+  final String tipoLaurea; // triennale, magistrale
+  final int anno; // triennale: 1-3, magistrale: 1-2
   final int? votoPrevisto;
-  final int? votoOttenuto;
   final String materiali;
   final DateTime createdAt;
 
@@ -23,8 +24,9 @@ class Corso {
     required this.cfu,
     this.descrizione = '',
     this.stato = 'da_iniziare',
+    this.tipoLaurea = 'triennale',
+    this.anno = 1,
     this.votoPrevisto,
-    this.votoOttenuto,
     this.materiali = '',
     required this.createdAt,
   });
@@ -36,6 +38,12 @@ class Corso {
     'completato',
     'da_ripassare',
     'superato',
+  ];
+
+  /// Tipi di laurea disponibili.
+  static const List<String> tipiLaureaDisponibili = [
+    'triennale',
+    'magistrale',
   ];
 
   /// Label leggibile per lo stato.
@@ -56,6 +64,30 @@ class Corso {
     }
   }
 
+  /// Label leggibile per il tipo di laurea.
+  static String tipoLaureaLabel(String tipo) {
+    switch (tipo) {
+      case 'triennale':
+        return 'Triennale';
+      case 'magistrale':
+        return 'Magistrale';
+      default:
+        return tipo;
+    }
+  }
+
+  /// Anni disponibili in base al tipo di laurea.
+  static List<int> anniPerTipo(String tipoLaurea) {
+    switch (tipoLaurea) {
+      case 'triennale':
+        return [1, 2, 3];
+      case 'magistrale':
+        return [1, 2];
+      default:
+        return [1, 2, 3];
+    }
+  }
+
   /// Converte il modello in una Map per SQLite.
   Map<String, dynamic> toMap() {
     return {
@@ -66,8 +98,9 @@ class Corso {
       'cfu': cfu,
       'descrizione': descrizione,
       'stato': stato,
+      'tipo_laurea': tipoLaurea,
+      'anno': anno,
       'voto_previsto': votoPrevisto,
-      'voto_ottenuto': votoOttenuto,
       'materiali': materiali,
       'created_at': createdAt.toIso8601String(),
     };
@@ -83,8 +116,9 @@ class Corso {
       cfu: map['cfu'] as int,
       descrizione: (map['descrizione'] as String?) ?? '',
       stato: (map['stato'] as String?) ?? 'da_iniziare',
+      tipoLaurea: (map['tipo_laurea'] as String?) ?? 'triennale',
+      anno: (map['anno'] as int?) ?? 1,
       votoPrevisto: map['voto_previsto'] as int?,
-      votoOttenuto: map['voto_ottenuto'] as int?,
       materiali: (map['materiali'] as String?) ?? '',
       createdAt: DateTime.parse(map['created_at'] as String),
     );
@@ -99,10 +133,10 @@ class Corso {
     int? cfu,
     String? descrizione,
     String? stato,
+    String? tipoLaurea,
+    int? anno,
     int? votoPrevisto,
     bool clearVotoPrevisto = false,
-    int? votoOttenuto,
-    bool clearVotoOttenuto = false,
     String? materiali,
     DateTime? createdAt,
   }) {
@@ -114,8 +148,9 @@ class Corso {
       cfu: cfu ?? this.cfu,
       descrizione: descrizione ?? this.descrizione,
       stato: stato ?? this.stato,
+      tipoLaurea: tipoLaurea ?? this.tipoLaurea,
+      anno: anno ?? this.anno,
       votoPrevisto: clearVotoPrevisto ? null : (votoPrevisto ?? this.votoPrevisto),
-      votoOttenuto: clearVotoOttenuto ? null : (votoOttenuto ?? this.votoOttenuto),
       materiali: materiali ?? this.materiali,
       createdAt: createdAt ?? this.createdAt,
     );

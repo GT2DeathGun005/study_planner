@@ -111,6 +111,26 @@ class ObiettivoProvider extends ChangeNotifier {
     await loadObiettivi();
   }
 
+  /// Elimina tutti gli obiettivi associati a un corso.
+  Future<void> deleteObiettiviByCorso(String corsoId) async {
+    final obiettiviCorso =
+        _obiettivi.where((o) => o.corsoId == corsoId).toList();
+    for (final o in obiettiviCorso) {
+      await _repository.delete(o.id);
+    }
+    await loadObiettivi();
+  }
+
+  /// Elimina tutti gli obiettivi associati a un esame.
+  Future<void> deleteObiettiviByEsame(String esameId) async {
+    final obiettiviEsame =
+        _obiettivi.where((o) => o.esameId == esameId).toList();
+    for (final o in obiettiviEsame) {
+      await _repository.delete(o.id);
+    }
+    await loadObiettivi();
+  }
+
   /// Toggle completamento di un obiettivo.
   Future<void> toggleCompletato(String id) async {
     final obiettivo = _obiettivi.firstWhere((o) => o.id == id);

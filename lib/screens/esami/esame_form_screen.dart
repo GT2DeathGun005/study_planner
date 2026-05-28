@@ -2,13 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../../models/esame.dart';
-import '../../providers/corso_provider.dart';
 import '../../providers/esame_provider.dart';
 
 /// Schermata per creare o modificare un Esame.
 ///
+/// Il [corsoId] è obbligatorio e determina il corso associato.
 /// Se viene passato un [esame] esistente, pre-compila i campi per la modifica.
-/// Il [corsoId] può essere passato per pre-selezionare il corso associato.
+/// Un esame completato non è modificabile.
 class EsameFormScreen extends StatefulWidget {
   final Esame? esame;
   final String? corsoId;
@@ -24,13 +24,18 @@ class _EsameFormScreenState extends State<EsameFormScreen> {
   late final TextEditingController _titoloController;
   late final TextEditingController _noteController;
   late final TextEditingController _votoController;
-  late String? _corsoId;
+  late final TextEditingController _pesoController;
+  late String _corsoId;
   late DateTime _data;
   late String _tipologia;
   late String _priorita;
   late String _stato;
 
   bool get isEditing => widget.esame != null;
+
+  /// Un esame completato non può essere modificato.
+  bool get isReadOnly =>
+      isEditing && widget.esame!.stato == 'completato';
 
   @override
   void initState() {
@@ -40,7 +45,9 @@ class _EsameFormScreenState extends State<EsameFormScreen> {
     _noteController = TextEditingController(text: e?.note ?? '');
     _votoController =
         TextEditingController(text: e?.voto?.toString() ?? '');
-    _corsoId = e?.corsoId ?? widget.corsoId;
+    _pesoController = TextEditingController(
+        text: e?.pesoPercentuale.toString() ?? '100');
+    _corsoId = e?.corsoId ?? widget.corsoId!;
     _data = e?.data ?? DateTime.now().add(const Duration(days: 7));
     _tipologia = e?.tipologia ?? 'scritto';
     _priorita = e?.priorita ?? 'media';
@@ -52,16 +59,27 @@ class _EsameFormScreenState extends State<EsameFormScreen> {
     _titoloController.dispose();
     _noteController.dispose();
     _votoController.dispose();
+    _pesoController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final corsi = context.watch<CorsoProvider>().tuttiCorsi;
+    final theme = Theme.of(context);
+
+    final esameProv = context.watch<EsameProvider>();
+    final disponibile = esameProv.getPercentualeDisponibile(
+      _corsoId,
+      excludeEsameId: widget.esame?.id,
+    );
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(isEditing ? 'Modifica Esame' : 'Nuovo Esame'),
+        title: Text(isReadOnly
+            ? 'Dettaglio Esame'
+            : isEditing
+                ? 'Modifica Esame'
+                : 'Nuovo Esame'),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
@@ -70,30 +88,45 @@ class _EsameFormScreenState extends State<EsameFormScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              // Banner esame completato
+              if (isReadOnly) ...[
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.green.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                        color: Colors.green.withValues(alpha: 0.3)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.lock, color: Colors.green, size: 20),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Esame completato — non modificabile',
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: Colors.green[700],
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+              ],
+
               // Titolo
               TextFormField(
                 controller: _titoloController,
+                readOnly: isReadOnly,
                 decoration: const InputDecoration(
                   labelText: 'Titolo *',
                   prefixIcon: Icon(Icons.title),
                 ),
                 validator: (v) =>
                     v == null || v.trim().isEmpty ? 'Campo obbligatorio' : null,
-              ),
-              const SizedBox(height: 16),
-
-              // Corso associato
-              DropdownButtonFormField<String>(
-                initialValue: _corsoId,
-                decoration: const InputDecoration(
-                  labelText: 'Corso associato *',
-                  prefixIcon: Icon(Icons.book),
-                ),
-                items: corsi.map((c) {
-                  return DropdownMenuItem(value: c.id, child: Text(c.nome));
-                }).toList(),
-                onChanged: (v) => setState(() => _corsoId = v),
-                validator: (v) => v == null ? 'Seleziona un corso' : null,
               ),
               const SizedBox(height: 16),
 
@@ -104,8 +137,10 @@ class _EsameFormScreenState extends State<EsameFormScreen> {
                 title: const Text('Data'),
                 subtitle:
                     Text(DateFormat('dd MMMM yyyy', 'it_IT').format(_data)),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: _pickDate,
+                trailing: isReadOnly
+                    ? null
+                    : const Icon(Icons.chevron_right),
+                onTap: isReadOnly ? null : _pickDate,
               ),
               const Divider(),
 
@@ -125,9 +160,11 @@ class _EsameFormScreenState extends State<EsameFormScreen> {
                           child: Text(Esame.tipologiaLabel(t)),
                         );
                       }).toList(),
-                      onChanged: (v) {
-                        if (v != null) setState(() => _tipologia = v);
-                      },
+                      onChanged: isReadOnly
+                          ? null
+                          : (v) {
+                              if (v != null) setState(() => _tipologia = v);
+                            },
                     ),
                   ),
                   const SizedBox(width: 16),
@@ -144,16 +181,18 @@ class _EsameFormScreenState extends State<EsameFormScreen> {
                           child: Text(Esame.prioritaLabel(p)),
                         );
                       }).toList(),
-                      onChanged: (v) {
-                        if (v != null) setState(() => _priorita = v);
-                      },
+                      onChanged: isReadOnly
+                          ? null
+                          : (v) {
+                              if (v != null) setState(() => _priorita = v);
+                            },
                     ),
                   ),
                 ],
               ),
               const SizedBox(height: 16),
 
-              // Stato
+              // Stato (solo Programmato / Completato)
               DropdownButtonFormField<String>(
                 initialValue: _stato,
                 decoration: const InputDecoration(
@@ -166,26 +205,50 @@ class _EsameFormScreenState extends State<EsameFormScreen> {
                     child: Text(Esame.statoLabel(s)),
                   );
                 }).toList(),
-                onChanged: (v) {
-                  if (v != null) setState(() => _stato = v);
-                },
+                onChanged: isReadOnly
+                    ? null
+                    : (v) {
+                        if (v != null) setState(() => _stato = v);
+                      },
               ),
               const SizedBox(height: 16),
 
-              // Voto (opzionale)
+              // Peso percentuale
+              _buildPesoField(context, disponibile),
+              const SizedBox(height: 16),
+
+              // Voto (obbligatorio se completato)
               TextFormField(
                 controller: _votoController,
-                decoration: const InputDecoration(
-                  labelText: 'Voto (opzionale)',
-                  prefixIcon: Icon(Icons.grade),
+                readOnly: isReadOnly,
+                decoration: InputDecoration(
+                  labelText: _stato == 'completato'
+                      ? 'Voto *'
+                      : 'Voto ',
+                  prefixIcon: const Icon(Icons.grade),
+                  helperText: 'Valore in trentesimi (0-30)',
                 ),
                 keyboardType: TextInputType.number,
+                onChanged: (v) {
+                  // Se l'utente inserisce un voto, imposta automaticamente lo stato a completato
+                  if (v.isNotEmpty && int.tryParse(v) != null) {
+                    if (_stato != 'completato') {
+                      setState(() => _stato = 'completato');
+                    }
+                  }
+                },
                 validator: (v) {
-                  if (v != null && v.isNotEmpty) {
+                  if (_stato == 'completato') {
+                    if (v == null || v.isEmpty) {
+                      return 'Il voto è obbligatorio per un esame completato';
+                    }
                     final n = int.tryParse(v);
                     if (n == null || n < 0 || n > 30) {
                       return 'Valore 0-30';
                     }
+                  } else if (v != null && v.isNotEmpty) {
+                    // Se c'è un voto ma lo stato non è completato
+                    return 'Imposta lo stato a "Completato" per inserire un voto';
                   }
                   return null;
                 },
@@ -195,6 +258,7 @@ class _EsameFormScreenState extends State<EsameFormScreen> {
               // Note
               TextFormField(
                 controller: _noteController,
+                readOnly: isReadOnly,
                 decoration: const InputDecoration(
                   labelText: 'Note',
                   prefixIcon: Icon(Icons.notes),
@@ -205,22 +269,58 @@ class _EsameFormScreenState extends State<EsameFormScreen> {
 
               const SizedBox(height: 32),
 
-              // Pulsante salva
-              FilledButton.icon(
-                onPressed: _save,
-                icon: Icon(isEditing ? Icons.save : Icons.add),
-                label: Text(isEditing ? 'Salva modifiche' : 'Crea esame'),
-                style: FilledButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+              // Pulsante salva (nascosto se read-only)
+              if (!isReadOnly)
+                FilledButton.icon(
+                  onPressed: _save,
+                  icon: Icon(isEditing ? Icons.save : Icons.add),
+                  label: Text(isEditing ? 'Salva modifiche' : 'Crea esame'),
+                  style: FilledButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
                 ),
-              ),
             ],
           ),
         ),
       ),
+    );
+  }
+
+  /// Costruisce il campo per il peso percentuale con indicazione
+  /// della percentuale disponibile e validazione stretta.
+  Widget _buildPesoField(BuildContext context, double disponibile) {
+    final pesoInserito = int.tryParse(_pesoController.text) ?? 0;
+    final superaLimite = pesoInserito > disponibile;
+
+    return TextFormField(
+      controller: _pesoController,
+      readOnly: isReadOnly,
+      decoration: InputDecoration(
+        labelText: 'Peso % *',
+        prefixIcon: const Icon(Icons.percent),
+        helperText: 'Percentuale rimanente: ${disponibile.toStringAsFixed(0)}%',
+        helperStyle: TextStyle(
+          color: superaLimite ? Theme.of(context).colorScheme.error : null,
+        ),
+        errorText: superaLimite
+            ? 'Non puoi superare la percentuale rimanente (${disponibile.toStringAsFixed(0)}%)'
+            : null,
+        suffixText: '%',
+      ),
+      keyboardType: TextInputType.number,
+      onChanged: (_) => setState(() {}),
+      validator: (v) {
+        if (v == null || v.isEmpty) return 'Campo obbligatorio';
+        final n = int.tryParse(v);
+        if (n == null || n < 0) return 'Valore non valido';
+        if (n > disponibile) {
+          return 'Max ${disponibile.toStringAsFixed(0)}%';
+        }
+        return null;
+      },
     );
   }
 
@@ -230,6 +330,7 @@ class _EsameFormScreenState extends State<EsameFormScreen> {
       initialDate: _data,
       firstDate: DateTime(2020),
       lastDate: DateTime(2030),
+      locale: const Locale('it', 'IT'),
     );
     if (picked != null) {
       setState(() => _data = picked);
@@ -241,29 +342,32 @@ class _EsameFormScreenState extends State<EsameFormScreen> {
 
     final provider = context.read<EsameProvider>();
     final voto = int.tryParse(_votoController.text);
+    final peso = int.tryParse(_pesoController.text) ?? 100;
 
     if (isEditing) {
       final updated = widget.esame!.copyWith(
         titolo: _titoloController.text.trim(),
-        corsoId: _corsoId!,
+        corsoId: _corsoId,
         data: _data,
         tipologia: _tipologia,
         priorita: _priorita,
         stato: _stato,
         voto: voto,
         clearVoto: _votoController.text.isEmpty,
+        pesoPercentuale: peso,
         note: _noteController.text.trim(),
       );
       provider.updateEsame(updated);
     } else {
       provider.addEsame(
         titolo: _titoloController.text.trim(),
-        corsoId: _corsoId!,
+        corsoId: _corsoId,
         data: _data,
         tipologia: _tipologia,
         priorita: _priorita,
         stato: _stato,
         voto: voto,
+        pesoPercentuale: peso,
         note: _noteController.text.trim(),
       );
     }
