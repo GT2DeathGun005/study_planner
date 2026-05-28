@@ -34,7 +34,6 @@ class _CalendarioScreenState extends State<CalendarioScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final df = DateFormat('dd MMM yyyy', 'it_IT');
 
     return Scaffold(
       appBar: AppBar(title: const Text('Calendario'), centerTitle: false),
@@ -42,6 +41,15 @@ class _CalendarioScreenState extends State<CalendarioScreen> {
         builder: (context, obiProv, esameProv, corsoProv, _) {
           final obiettiviGiorno = obiProv.getObiettiviByDate(_selectedDay);
           final esamiGiorno = esameProv.getEsamiByDate(_selectedDay);
+
+          // Formattazione data giorno selezionato con mese in maiuscolo (es: 28 Mag 2026)
+          final dayStr = DateFormat('dd', 'it_IT').format(_selectedDay);
+          final monthStr = DateFormat('MMM', 'it_IT').format(_selectedDay);
+          final yearStr = DateFormat('yyyy', 'it_IT').format(_selectedDay);
+          final capitalizedMonth = monthStr.isEmpty
+              ? ''
+              : (monthStr[0].toUpperCase() + monthStr.substring(1));
+          final formattedDate = '$dayStr $capitalizedMonth $yearStr';
 
           return Column(
             children: [
@@ -69,6 +77,28 @@ class _CalendarioScreenState extends State<CalendarioScreen> {
                   final esa = esameProv.getEsamiByDate(day);
                   return [...obi, ...esa];
                 },
+                daysOfWeekHeight: 28.0,
+                availableCalendarFormats: const {
+                  CalendarFormat.month: 'Mese',
+                  CalendarFormat.week: 'Settimana',
+                },
+                calendarBuilders: CalendarBuilders(
+                  dowBuilder: (context, day) {
+                    final text = DateFormat.E('it_IT').format(day);
+                    final formatted = text.replaceAll('.', '').toUpperCase();
+                    final isWeekend = day.weekday == DateTime.saturday || day.weekday == DateTime.sunday;
+                    return Center(
+                      child: Text(
+                        formatted,
+                        style: theme.textTheme.labelMedium?.copyWith(
+                          color: isWeekend ? Colors.red[400] : theme.colorScheme.onSurface.withValues(alpha: 0.7),
+                          fontWeight: FontWeight.bold,
+                          fontSize: 11,
+                        ),
+                      ),
+                    );
+                  },
+                ),
                 calendarStyle: CalendarStyle(
                   todayDecoration: BoxDecoration(
                     color: theme.colorScheme.primary.withValues(alpha: 0.3),
@@ -92,6 +122,11 @@ class _CalendarioScreenState extends State<CalendarioScreen> {
                     border: Border.all(color: theme.colorScheme.outline),
                     borderRadius: BorderRadius.circular(12),
                   ),
+                  titleTextFormatter: (date, locale) {
+                    final formatted = DateFormat.yMMMM(locale).format(date);
+                    if (formatted.isEmpty) return formatted;
+                    return formatted[0].toUpperCase() + formatted.substring(1);
+                  },
                 ),
               ),
 
@@ -102,7 +137,7 @@ class _CalendarioScreenState extends State<CalendarioScreen> {
                 padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
                 child: Row(
                   children: [
-                    Text(df.format(_selectedDay),
+                    Text(formattedDate,
                         style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600)),
                     const Spacer(),
                     Text('${obiettiviGiorno.length + esamiGiorno.length} elementi',

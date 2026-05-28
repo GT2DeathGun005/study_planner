@@ -203,7 +203,7 @@ class _ObiettiviScreenState extends State<ObiettiviScreen> {
           );
         },
       ),
-      floatingActionButton: FloatingActionButton(
+      floatingActionButton: FloatingActionButton.extended(
         onPressed: () {
           Navigator.push(
             context,
@@ -211,7 +211,8 @@ class _ObiettiviScreenState extends State<ObiettiviScreen> {
                 builder: (_) => const ObiettivoFormScreen()),
           );
         },
-        child: const Icon(Icons.add),
+        icon: const Icon(Icons.add),
+        label: const Text('Obiettivo'),
       ),
     );
   }

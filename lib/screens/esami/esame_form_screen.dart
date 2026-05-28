@@ -92,39 +92,11 @@ class _EsameFormScreenState extends State<EsameFormScreen> {
   }
 
   /// Sezione informativa per un esame completato (read-only).
-  /// Mostra tutti i dati in formato _DetailRow, come nel dettaglio corso.
   Widget _buildInfoSection(BuildContext context, ThemeData theme) {
     final esame = widget.esame!;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // Banner esame completato
-        Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: Colors.green.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-                color: Colors.green.withValues(alpha: 0.3)),
-          ),
-          child: Row(
-            children: [
-              const Icon(Icons.lock, color: Colors.green, size: 20),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  'Esame completato — non modificabile',
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: Colors.green[700],
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 16),
-
         // Card con dettagli
         Card(
           elevation: 0,

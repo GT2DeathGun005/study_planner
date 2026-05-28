@@ -19,6 +19,8 @@ class ProfiloScreen extends StatefulWidget {
 }
 
 class _ProfiloScreenState extends State<ProfiloScreen> {
+  String _selectedLaurea = 'triennale';
+
   @override
   void initState() {
     super.initState();
@@ -75,46 +77,99 @@ class _ProfiloScreenState extends State<ProfiloScreen> {
                 childAspectRatio: 1.15,
                 children: [
                   StatCard(icon: Icons.school, value: '$totCorsi', label: 'Corsi totali', color: Colors.blue),
-                  StatCard(
-                    icon: Icons.grade,
-                    value: esameProv.mediaVoti > 0
-                        ? esameProv.mediaVoti.toStringAsFixed(1)
-                        : '-',
-                    label: 'Media generale',
-                    color: Colors.amber,
+                  // Card con tendina per Media Triennale / Magistrale
+                  Builder(
+                    builder: (context) {
+                      final selectedColor = _selectedLaurea == 'triennale'
+                          ? Colors.indigo
+                          : Colors.purple.shade300;
+                      final mediaValue = _selectedLaurea == 'triennale'
+                          ? mediaTriennale
+                          : mediaMagistrale;
+                      final valueStr = mediaValue > 0
+                          ? mediaValue.toStringAsFixed(1)
+                          : '-';
+
+                      return Card(
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                          side: BorderSide(color: selectedColor.withValues(alpha: 0.2)),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: selectedColor.withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: Icon(
+                                  _selectedLaurea == 'triennale'
+                                      ? Icons.looks_one
+                                      : Icons.looks_two,
+                                  color: selectedColor,
+                                  size: 22,
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              Text(
+                                valueStr,
+                                style: theme.textTheme.headlineSmall?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                  color: theme.colorScheme.onSurface,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: selectedColor.withValues(alpha: 0.08),
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(color: selectedColor.withValues(alpha: 0.15)),
+                                ),
+                                child: DropdownButtonHideUnderline(
+                                  child: DropdownButton<String>(
+                                    value: _selectedLaurea,
+                                    isDense: true,
+                                    icon: Icon(Icons.arrow_drop_down, color: selectedColor, size: 16),
+                                    style: theme.textTheme.bodySmall?.copyWith(
+                                      color: selectedColor,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                    dropdownColor: theme.colorScheme.surface,
+                                    borderRadius: BorderRadius.circular(12),
+                                    onChanged: (String? newValue) {
+                                      if (newValue != null) {
+                                        setState(() {
+                                          _selectedLaurea = newValue;
+                                        });
+                                      }
+                                    },
+                                    items: const [
+                                      DropdownMenuItem<String>(
+                                        value: 'triennale',
+                                        child: Text('  Media Triennale'),
+                                      ),
+                                      DropdownMenuItem<String>(
+                                        value: 'magistrale',
+                                        child: Text('  Media Magistrale'),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
                   ),
                   StatCard(icon: Icons.emoji_events, value: '$esamiSuperati/$totEsami', label: 'Esami superati', color: Colors.green),
                   StatCard(icon: Icons.check_circle, value: '$taskCompletati/$totTask', label: 'Task completati', color: Colors.purple),
-                ],
-              ),
-              const SizedBox(height: 24),
-
-              // Medie per tipo di laurea
-              Text('Medie per Tipo di Laurea',
-                  style: theme.textTheme.titleMedium
-                      ?.copyWith(fontWeight: FontWeight.w600)),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  Expanded(
-                    child: _MediaCard(
-                      title: 'Triennale',
-                      icon: Icons.school,
-                      media: mediaTriennale,
-                      corsiCount: corsiTriennale.length,
-                      color: Colors.indigo,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: _MediaCard(
-                      title: 'Magistrale',
-                      icon: Icons.workspace_premium,
-                      media: mediaMagistrale,
-                      corsiCount: corsiMagistrale.length,
-                      color: Colors.deepPurple,
-                    ),
-                  ),
                 ],
               ),
               const SizedBox(height: 24),
@@ -254,66 +309,6 @@ class _ProfiloScreenState extends State<ProfiloScreen> {
   }
 }
 
-/// Card per mostrare la media voti di un tipo di laurea.
-class _MediaCard extends StatelessWidget {
-  final String title;
-  final IconData icon;
-  final double media;
-  final int corsiCount;
-  final Color color;
-
-  const _MediaCard({
-    required this.title,
-    required this.icon,
-    required this.media,
-    required this.corsiCount,
-    required this.color,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: color.withValues(alpha: 0.2)),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(icon, color: color, size: 20),
-                const SizedBox(width: 8),
-                Text(title,
-                    style: theme.textTheme.labelLarge
-                        ?.copyWith(fontWeight: FontWeight.w600)),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Text(
-              media > 0 ? media.toStringAsFixed(1) : '—',
-              style: theme.textTheme.headlineMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: color,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              '$corsiCount cors${corsiCount == 1 ? 'o' : 'i'}',
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
 
 class _LegendItem extends StatelessWidget {
   final Color color;
