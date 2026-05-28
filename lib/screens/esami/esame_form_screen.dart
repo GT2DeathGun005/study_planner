@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../../models/esame.dart';
+import '../../providers/corso_provider.dart';
 import '../../providers/esame_provider.dart';
 
 /// Schermata per creare o modificare un Esame.
@@ -83,208 +84,275 @@ class _EsameFormScreenState extends State<EsameFormScreen> {
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
+        child: isReadOnly
+            ? _buildInfoSection(context, theme)
+            : _buildForm(context, theme, disponibile),
+      ),
+    );
+  }
+
+  /// Sezione informativa per un esame completato (read-only).
+  /// Mostra tutti i dati in formato _DetailRow, come nel dettaglio corso.
+  Widget _buildInfoSection(BuildContext context, ThemeData theme) {
+    final esame = widget.esame!;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // Banner esame completato
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Colors.green.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+                color: Colors.green.withValues(alpha: 0.3)),
+          ),
+          child: Row(
             children: [
-              // Banner esame completato
-              if (isReadOnly) ...[
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.green.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                        color: Colors.green.withValues(alpha: 0.3)),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.lock, color: Colors.green, size: 20),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          'Esame completato — non modificabile',
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            color: Colors.green[700],
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ),
-                    ],
+              const Icon(Icons.lock, color: Colors.green, size: 20),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Esame completato — non modificabile',
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: Colors.green[700],
+                    fontWeight: FontWeight.w500,
                   ),
                 ),
-                const SizedBox(height: 16),
-              ],
-
-              // Titolo
-              TextFormField(
-                controller: _titoloController,
-                readOnly: isReadOnly,
-                decoration: const InputDecoration(
-                  labelText: 'Titolo *',
-                  prefixIcon: Icon(Icons.title),
-                ),
-                validator: (v) =>
-                    v == null || v.trim().isEmpty ? 'Campo obbligatorio' : null,
               ),
-              const SizedBox(height: 16),
-
-              // Data
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: const Icon(Icons.calendar_today),
-                title: const Text('Data'),
-                subtitle:
-                    Text(DateFormat('dd MMMM yyyy', 'it_IT').format(_data)),
-                trailing: isReadOnly
-                    ? null
-                    : const Icon(Icons.chevron_right),
-                onTap: isReadOnly ? null : _pickDate,
-              ),
-              const Divider(),
-
-              // Tipologia e Priorità
-              Row(
-                children: [
-                  Expanded(
-                    child: DropdownButtonFormField<String>(
-                      initialValue: _tipologia,
-                      decoration: const InputDecoration(
-                        labelText: 'Tipologia',
-                        prefixIcon: Icon(Icons.category),
-                      ),
-                      items: Esame.tipologieDisponibili.map((t) {
-                        return DropdownMenuItem(
-                          value: t,
-                          child: Text(Esame.tipologiaLabel(t)),
-                        );
-                      }).toList(),
-                      onChanged: isReadOnly
-                          ? null
-                          : (v) {
-                              if (v != null) setState(() => _tipologia = v);
-                            },
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: DropdownButtonFormField<String>(
-                      initialValue: _priorita,
-                      decoration: const InputDecoration(
-                        labelText: 'Priorità',
-                        prefixIcon: Icon(Icons.priority_high),
-                      ),
-                      items: Esame.prioritaDisponibili.map((p) {
-                        return DropdownMenuItem(
-                          value: p,
-                          child: Text(Esame.prioritaLabel(p)),
-                        );
-                      }).toList(),
-                      onChanged: isReadOnly
-                          ? null
-                          : (v) {
-                              if (v != null) setState(() => _priorita = v);
-                            },
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-
-              // Stato (solo Programmato / Completato)
-              DropdownButtonFormField<String>(
-                initialValue: _stato,
-                decoration: const InputDecoration(
-                  labelText: 'Stato',
-                  prefixIcon: Icon(Icons.flag),
-                ),
-                items: Esame.statiDisponibili.map((s) {
-                  return DropdownMenuItem(
-                    value: s,
-                    child: Text(Esame.statoLabel(s)),
-                  );
-                }).toList(),
-                onChanged: isReadOnly
-                    ? null
-                    : (v) {
-                        if (v != null) setState(() => _stato = v);
-                      },
-              ),
-              const SizedBox(height: 16),
-
-              // Peso percentuale
-              _buildPesoField(context, disponibile),
-              const SizedBox(height: 16),
-
-              // Voto (obbligatorio se completato)
-              TextFormField(
-                controller: _votoController,
-                readOnly: isReadOnly,
-                decoration: InputDecoration(
-                  labelText: _stato == 'completato'
-                      ? 'Voto *'
-                      : 'Voto ',
-                  prefixIcon: const Icon(Icons.grade),
-                  helperText: 'Valore in trentesimi (0-30)',
-                ),
-                keyboardType: TextInputType.number,
-                onChanged: (v) {
-                  // Se l'utente inserisce un voto, imposta automaticamente lo stato a completato
-                  if (v.isNotEmpty && int.tryParse(v) != null) {
-                    if (_stato != 'completato') {
-                      setState(() => _stato = 'completato');
-                    }
-                  }
-                },
-                validator: (v) {
-                  if (_stato == 'completato') {
-                    if (v == null || v.isEmpty) {
-                      return 'Il voto è obbligatorio per un esame completato';
-                    }
-                    final n = int.tryParse(v);
-                    if (n == null || n < 0 || n > 30) {
-                      return 'Valore 0-30';
-                    }
-                  } else if (v != null && v.isNotEmpty) {
-                    // Se c'è un voto ma lo stato non è completato
-                    return 'Imposta lo stato a "Completato" per inserire un voto';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 16),
-
-              // Note
-              TextFormField(
-                controller: _noteController,
-                readOnly: isReadOnly,
-                decoration: const InputDecoration(
-                  labelText: 'Note',
-                  prefixIcon: Icon(Icons.notes),
-                  alignLabelWithHint: true,
-                ),
-                maxLines: 3,
-              ),
-
-              const SizedBox(height: 32),
-
-              // Pulsante salva (nascosto se read-only)
-              if (!isReadOnly)
-                FilledButton.icon(
-                  onPressed: _save,
-                  icon: Icon(isEditing ? Icons.save : Icons.add),
-                  label: Text(isEditing ? 'Salva modifiche' : 'Crea esame'),
-                  style: FilledButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                ),
             ],
           ),
         ),
+        const SizedBox(height: 16),
+
+        // Card con dettagli
+        Card(
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+            side: BorderSide(
+              color: theme.colorScheme.outline.withValues(alpha: 0.2),
+            ),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _DetailRow(
+                    icon: Icons.title,
+                    label: 'Titolo',
+                    value: esame.titolo),
+                _DetailRow(
+                    icon: Icons.calendar_today,
+                    label: 'Data',
+                    value: DateFormat('dd MMMM yyyy', 'it_IT')
+                        .format(esame.data)),
+                _DetailRow(
+                    icon: Icons.category,
+                    label: 'Tipologia',
+                    value: Esame.tipologiaLabel(esame.tipologia)),
+                _DetailRow(
+                    icon: Icons.priority_high,
+                    label: 'Priorità',
+                    value: Esame.prioritaLabel(esame.priorita)),
+                _DetailRow(
+                    icon: Icons.flag,
+                    label: 'Stato',
+                    value: Esame.statoLabel(esame.stato)),
+                _DetailRow(
+                    icon: Icons.percent,
+                    label: 'Peso',
+                    value: '${esame.pesoPercentuale}%'),
+                if (esame.voto != null)
+                  _DetailRow(
+                      icon: Icons.grade,
+                      label: 'Voto',
+                      value: '${esame.voto}/30'),
+                if (esame.voto != null)
+                  _DetailRow(
+                      icon: Icons.calculate,
+                      label: 'Punti ponderati',
+                      value: esame.puntiPonderati.toStringAsFixed(1)),
+                if (esame.note.isNotEmpty) ...[
+                  const Divider(height: 24),
+                  Text('Note',
+                      style: theme.textTheme.labelMedium?.copyWith(
+                        color: theme.colorScheme.onSurface
+                            .withValues(alpha: 0.5),
+                      )),
+                  const SizedBox(height: 4),
+                  Text(esame.note, style: theme.textTheme.bodyMedium),
+                ],
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// Form per creare o modificare un esame (non completato).
+  Widget _buildForm(BuildContext context, ThemeData theme, double disponibile) {
+    return Form(
+      key: _formKey,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Titolo
+          TextFormField(
+            controller: _titoloController,
+            decoration: const InputDecoration(
+              labelText: 'Titolo *',
+              prefixIcon: Icon(Icons.title),
+            ),
+            validator: (v) =>
+                v == null || v.trim().isEmpty ? 'Campo obbligatorio' : null,
+          ),
+          const SizedBox(height: 16),
+
+          // Data
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: const Icon(Icons.calendar_today),
+            title: const Text('Data'),
+            subtitle:
+                Text(DateFormat('dd MMMM yyyy', 'it_IT').format(_data)),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: _pickDate,
+          ),
+          const Divider(),
+
+          // Tipologia e Priorità
+          Row(
+            children: [
+              Expanded(
+                child: DropdownButtonFormField<String>(
+                  initialValue: _tipologia,
+                  decoration: const InputDecoration(
+                    labelText: 'Tipologia',
+                    prefixIcon: Icon(Icons.category),
+                  ),
+                  items: Esame.tipologieDisponibili.map((t) {
+                    return DropdownMenuItem(
+                      value: t,
+                      child: Text(Esame.tipologiaLabel(t)),
+                    );
+                  }).toList(),
+                  onChanged: (v) {
+                    if (v != null) setState(() => _tipologia = v);
+                  },
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: DropdownButtonFormField<String>(
+                  initialValue: _priorita,
+                  decoration: const InputDecoration(
+                    labelText: 'Priorità',
+                    prefixIcon: Icon(Icons.priority_high),
+                  ),
+                  items: Esame.prioritaDisponibili.map((p) {
+                    return DropdownMenuItem(
+                      value: p,
+                      child: Text(Esame.prioritaLabel(p)),
+                    );
+                  }).toList(),
+                  onChanged: (v) {
+                    if (v != null) setState(() => _priorita = v);
+                  },
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+
+          // Stato (solo Programmato / Completato)
+          DropdownButtonFormField<String>(
+            initialValue: _stato,
+            decoration: const InputDecoration(
+              labelText: 'Stato',
+              prefixIcon: Icon(Icons.flag),
+            ),
+            items: Esame.statiDisponibili.map((s) {
+              return DropdownMenuItem(
+                value: s,
+                child: Text(Esame.statoLabel(s)),
+              );
+            }).toList(),
+            onChanged: (v) {
+              if (v != null) setState(() => _stato = v);
+            },
+          ),
+          const SizedBox(height: 16),
+
+          // Peso percentuale
+          _buildPesoField(context, disponibile),
+          const SizedBox(height: 16),
+
+          // Voto (obbligatorio se completato)
+          TextFormField(
+            controller: _votoController,
+            decoration: InputDecoration(
+              labelText: _stato == 'completato'
+                  ? 'Voto *'
+                  : 'Voto ',
+              prefixIcon: const Icon(Icons.grade),
+              helperText: 'Valore in trentesimi (0-30)',
+            ),
+            keyboardType: TextInputType.number,
+            onChanged: (v) {
+              // Se l'utente inserisce un voto, imposta automaticamente lo stato a completato
+              if (v.isNotEmpty && int.tryParse(v) != null) {
+                if (_stato != 'completato') {
+                  setState(() => _stato = 'completato');
+                }
+              }
+            },
+            validator: (v) {
+              if (_stato == 'completato') {
+                if (v == null || v.isEmpty) {
+                  return 'Il voto è obbligatorio per un esame completato';
+                }
+                final n = int.tryParse(v);
+                if (n == null || n < 0 || n > 30) {
+                  return 'Valore 0-30';
+                }
+              } else if (v != null && v.isNotEmpty) {
+                // Se c'è un voto ma lo stato non è completato
+                return 'Imposta lo stato a "Completato" per inserire un voto';
+              }
+              return null;
+            },
+          ),
+          const SizedBox(height: 16),
+
+          // Note
+          TextFormField(
+            controller: _noteController,
+            decoration: const InputDecoration(
+              labelText: 'Note',
+              prefixIcon: Icon(Icons.notes),
+              alignLabelWithHint: true,
+            ),
+            maxLines: 3,
+          ),
+
+          const SizedBox(height: 32),
+
+          // Pulsante salva
+          FilledButton.icon(
+            onPressed: _save,
+            icon: Icon(isEditing ? Icons.save : Icons.add),
+            label: Text(isEditing ? 'Salva modifiche' : 'Crea esame'),
+            style: FilledButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -337,10 +405,11 @@ class _EsameFormScreenState extends State<EsameFormScreen> {
     }
   }
 
-  void _save() {
+  void _save() async {
     if (!_formKey.currentState!.validate()) return;
 
-    final provider = context.read<EsameProvider>();
+    final esameProv = context.read<EsameProvider>();
+    final corsoProv = context.read<CorsoProvider>();
     final voto = int.tryParse(_votoController.text);
     final peso = int.tryParse(_pesoController.text) ?? 100;
 
@@ -357,9 +426,9 @@ class _EsameFormScreenState extends State<EsameFormScreen> {
         pesoPercentuale: peso,
         note: _noteController.text.trim(),
       );
-      provider.updateEsame(updated);
+      await esameProv.updateEsame(updated);
     } else {
-      provider.addEsame(
+      await esameProv.addEsame(
         titolo: _titoloController.text.trim(),
         corsoId: _corsoId,
         data: _data,
@@ -372,6 +441,70 @@ class _EsameFormScreenState extends State<EsameFormScreen> {
       );
     }
 
-    Navigator.pop(context);
+    // Controlla se il corso deve passare automaticamente a "superato":
+    // - Il peso totale degli esami ha raggiunto il 100%
+    // - Tutti gli esami del corso sono completati con un voto
+    _checkAutoSuperato(corsoProv, esameProv);
+
+    if (mounted) Navigator.pop(context);
+  }
+
+  /// Verifica se il corso deve passare automaticamente allo stato 'superato'.
+  /// Condizioni: peso totale = 100% e tutti gli esami completati con voto.
+  void _checkAutoSuperato(CorsoProvider corsoProv, EsameProvider esameProv) {
+    final pesoTotale = esameProv.getPercentualeTotale(_corsoId);
+    if (pesoTotale < 100) return;
+
+    final esamiCorso = esameProv.getEsamiCorso(_corsoId);
+    if (esamiCorso.isEmpty) return;
+
+    final tuttiCompletati = esamiCorso.every(
+      (e) => e.stato == 'completato' && e.voto != null,
+    );
+
+    if (tuttiCompletati) {
+      final corso = corsoProv.getCorsoById(_corsoId);
+      if (corso != null && corso.stato != 'superato') {
+        corsoProv.updateCorso(corso.copyWith(stato: 'superato'));
+      }
+    }
+  }
+}
+
+/// Widget riga dettaglio per la visualizzazione read-only di un esame.
+class _DetailRow extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String value;
+
+  const _DetailRow({
+    required this.icon,
+    required this.label,
+    required this.value,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(
+        children: [
+          Icon(icon,
+              size: 18,
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.5)),
+          const SizedBox(width: 12),
+          Text(label,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+              )),
+          const Spacer(),
+          Text(value,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                fontWeight: FontWeight.w500,
+              )),
+        ],
+      ),
+    );
   }
 }

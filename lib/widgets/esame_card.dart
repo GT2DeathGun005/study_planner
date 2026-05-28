@@ -5,7 +5,9 @@ import '../models/esame.dart';
 /// Card per visualizzare un esame nella lista.
 ///
 /// Mostra titolo, data, tipologia, priorità con colore, stato, voto
-/// e peso percentuale.
+/// e peso percentuale. Il voto appare a destra nella riga del titolo
+/// per mantenere altezza uniforme.
+/// Supporta swipe per rivelare il cestino ed eliminare.
 class EsameCard extends StatelessWidget {
   final Esame esame;
   final String? nomeCorso;
@@ -49,9 +51,11 @@ class EsameCard extends StatelessWidget {
     final theme = Theme.of(context);
     final prioritaColor = _prioritaColor(esame.priorita);
     final dateFormat = DateFormat('dd MMM yyyy', 'it_IT');
+    final hasVoto = esame.voto != null;
+    final votoColor = esame.superato ? Colors.amber[700]! : Colors.red;
 
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+    final card = Card(
+      margin: EdgeInsets.zero,
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
@@ -101,12 +105,32 @@ class EsameCard extends StatelessWidget {
                       ],
                     ),
                   ),
-                  if (onDelete != null)
-                    IconButton(
-                      icon: Icon(Icons.delete_outline,
-                          color: theme.colorScheme.error, size: 20),
-                      onPressed: onDelete,
+                  // Voto a destra del titolo
+                  if (hasVoto) ...[
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: votoColor.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.grade, size: 14, color: votoColor),
+                          const SizedBox(width: 4),
+                          Text(
+                            '${esame.voto}/30',
+                            style: theme.textTheme.labelMedium?.copyWith(
+                              fontWeight: FontWeight.w700,
+                              color: votoColor,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
+                  ],
                 ],
               ),
               const SizedBox(height: 12),
@@ -123,8 +147,8 @@ class EsameCard extends StatelessWidget {
                   ),
                   const SizedBox(width: 12),
                   Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 8, vertical: 2),
                     decoration: BoxDecoration(
                       color: theme.colorScheme.surfaceContainerHighest,
                       borderRadius: BorderRadius.circular(8),
@@ -137,8 +161,8 @@ class EsameCard extends StatelessWidget {
                   const SizedBox(width: 8),
                   // Peso percentuale
                   Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 8, vertical: 2),
                     decoration: BoxDecoration(
                       color: theme.colorScheme.primaryContainer
                           .withValues(alpha: 0.5),
@@ -154,10 +178,11 @@ class EsameCard extends StatelessWidget {
                   ),
                   const Spacer(),
                   Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 8, vertical: 2),
                     decoration: BoxDecoration(
-                      color: _statoColor(esame.stato).withValues(alpha: 0.1),
+                      color:
+                          _statoColor(esame.stato).withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
@@ -170,36 +195,46 @@ class EsameCard extends StatelessWidget {
                   ),
                 ],
               ),
-              if (esame.voto != null) ...[
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    Icon(Icons.grade,
-                        size: 16,
-                        color: esame.superato ? Colors.amber[700] : Colors.red),
-                    const SizedBox(width: 4),
-                    Text(
-                      'Voto: ${esame.voto}/30',
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        fontWeight: FontWeight.w600,
-                        color:
-                            esame.superato ? Colors.amber[700] : Colors.red,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      '(${esame.puntiPonderati.toStringAsFixed(1)} punti)',
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
             ],
           ),
         ),
       ),
+    );
+
+    // Swipe to reveal delete
+    if (onDelete != null) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+        child: Stack(
+          children: [
+            Positioned.fill(
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.error,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                alignment: Alignment.centerRight,
+                padding: const EdgeInsets.only(right: 24),
+                child: const Icon(Icons.delete, color: Colors.white, size: 28),
+              ),
+            ),
+            Dismissible(
+              key: ValueKey(esame.id),
+              direction: DismissDirection.endToStart,
+              confirmDismiss: (_) async {
+                onDelete!();
+                return false; // La conferma viene gestita dalla dialog
+              },
+              child: card,
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      child: card,
     );
   }
 }

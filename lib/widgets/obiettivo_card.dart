@@ -5,6 +5,7 @@ import '../models/obiettivo.dart';
 ///
 /// Mostra checkbox, titolo, priorità, barra di progresso tempo
 /// e pulsante per avviare il Pomodoro.
+/// Supporta swipe per rivelare il cestino ed eliminare.
 class ObiettivoCard extends StatelessWidget {
   final Obiettivo obiettivo;
   final String? nomeCorso;
@@ -41,8 +42,8 @@ class ObiettivoCard extends StatelessWidget {
     final theme = Theme.of(context);
     final color = _prioritaColor(obiettivo.priorita);
 
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+    final card = Card(
+      margin: EdgeInsets.zero,
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
@@ -99,7 +100,8 @@ class ObiettivoCard extends StatelessWidget {
                                 ? TextDecoration.lineThrough
                                 : null,
                             color: obiettivo.completato
-                                ? theme.colorScheme.onSurface.withValues(alpha: 0.5)
+                                ? theme.colorScheme.onSurface
+                                    .withValues(alpha: 0.5)
                                 : null,
                           ),
                           maxLines: 1,
@@ -120,8 +122,8 @@ class ObiettivoCard extends StatelessWidget {
                   ),
                   // Priorità chip
                   Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 8, vertical: 2),
                     decoration: BoxDecoration(
                       color: color.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(8),
@@ -150,8 +152,8 @@ class ObiettivoCard extends StatelessWidget {
                             borderRadius: BorderRadius.circular(4),
                             child: LinearProgressIndicator(
                               value: obiettivo.progressoTempo,
-                              backgroundColor: theme.colorScheme
-                                  .surfaceContainerHighest,
+                              backgroundColor: theme
+                                  .colorScheme.surfaceContainerHighest,
                               color: obiettivo.progressoTempo >= 1.0
                                   ? Colors.green
                                   : theme.colorScheme.primary,
@@ -173,35 +175,65 @@ class ObiettivoCard extends StatelessWidget {
                   ],
                 ),
               ],
-              // Azioni
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  const SizedBox(width: 40),
-                  if (!obiettivo.completato && onPomodoro != null)
+              // Azioni (solo Pomodoro, il cestino è nello swipe)
+              if (!obiettivo.completato && onPomodoro != null) ...[
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    const SizedBox(width: 40),
                     TextButton.icon(
                       onPressed: onPomodoro,
                       icon: const Icon(Icons.timer, size: 16),
                       label: const Text('Pomodoro'),
                       style: TextButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                        padding:
+                            const EdgeInsets.symmetric(horizontal: 8),
                         visualDensity: VisualDensity.compact,
                       ),
                     ),
-                  const Spacer(),
-                  if (onDelete != null)
-                    IconButton(
-                      icon: Icon(Icons.delete_outline,
-                          color: theme.colorScheme.error, size: 18),
-                      onPressed: onDelete,
-                      visualDensity: VisualDensity.compact,
-                    ),
-                ],
-              ),
+                  ],
+                ),
+              ],
             ],
           ),
         ),
       ),
+    );
+
+    // Swipe to reveal delete
+    if (onDelete != null) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+        child: Stack(
+          children: [
+            Positioned.fill(
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.error,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                alignment: Alignment.centerRight,
+                padding: const EdgeInsets.only(right: 24),
+                child: const Icon(Icons.delete, color: Colors.white, size: 28),
+              ),
+            ),
+            Dismissible(
+              key: ValueKey(obiettivo.id),
+              direction: DismissDirection.endToStart,
+              confirmDismiss: (_) async {
+                onDelete!();
+                return false; // La conferma viene gestita dalla dialog
+              },
+              child: card,
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      child: card,
     );
   }
 }

@@ -4,8 +4,9 @@ import '../models/corso.dart';
 /// Card per visualizzare un corso nella lista.
 ///
 /// Mostra nome, docente, CFU, semestre, tipo laurea/anno e badge con lo stato.
-/// Il voto calcolato viene passato come parametro opzionale.
-/// Supporta tap per navigare al dettaglio e long-press per azioni.
+/// Il voto calcolato viene passato come parametro opzionale e appare a destra
+/// nella riga del titolo per mantenere altezza uniforme.
+/// Supporta swipe per rivelare il cestino ed eliminare.
 class CorsoCard extends StatelessWidget {
   final Corso corso;
   final double? votoCalcolato;
@@ -26,7 +27,7 @@ class CorsoCard extends StatelessWidget {
         return Colors.grey;
       case 'in_corso':
         return Colors.blue;
-      case 'completato':
+      case 'terminato':
         return Colors.orange;
       case 'da_ripassare':
         return Colors.amber;
@@ -43,7 +44,7 @@ class CorsoCard extends StatelessWidget {
         return Icons.hourglass_empty;
       case 'in_corso':
         return Icons.play_circle_outline;
-      case 'completato':
+      case 'terminato':
         return Icons.check_circle_outline;
       case 'da_ripassare':
         return Icons.refresh;
@@ -58,9 +59,10 @@ class CorsoCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final color = _statoColor(corso.stato);
+    final hasVoto = votoCalcolato != null && votoCalcolato! > 0;
 
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+    final card = Card(
+      margin: EdgeInsets.zero,
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
@@ -82,7 +84,8 @@ class CorsoCard extends StatelessWidget {
                       color: color.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(10),
                     ),
-                    child: Icon(_statoIcon(corso.stato), color: color, size: 20),
+                    child:
+                        Icon(_statoIcon(corso.stato), color: color, size: 20),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -101,18 +104,39 @@ class CorsoCard extends StatelessWidget {
                         Text(
                           corso.docente,
                           style: theme.textTheme.bodySmall?.copyWith(
-                            color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                            color: theme.colorScheme.onSurface
+                                .withValues(alpha: 0.6),
                           ),
                         ),
                       ],
                     ),
                   ),
-                  if (onDelete != null)
-                    IconButton(
-                      icon: Icon(Icons.delete_outline,
-                          color: theme.colorScheme.error, size: 20),
-                      onPressed: onDelete,
+                  // Voto calcolato a destra del titolo
+                  if (hasVoto) ...[
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.amber.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.grade, size: 14, color: Colors.amber[700]),
+                          const SizedBox(width: 4),
+                          Text(
+                            votoCalcolato!.toStringAsFixed(1),
+                            style: theme.textTheme.labelMedium?.copyWith(
+                              fontWeight: FontWeight.w700,
+                              color: Colors.amber[700],
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
+                  ],
                 ],
               ),
               const SizedBox(height: 12),
@@ -134,8 +158,8 @@ class CorsoCard extends StatelessWidget {
                   ),
                   const Spacer(),
                   Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
                       color: color.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(20),
@@ -150,26 +174,46 @@ class CorsoCard extends StatelessWidget {
                   ),
                 ],
               ),
-              if (votoCalcolato != null && votoCalcolato! > 0) ...[
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    Icon(Icons.grade, size: 16, color: Colors.amber[700]),
-                    const SizedBox(width: 4),
-                    Text(
-                      'Voto: ${votoCalcolato!.toStringAsFixed(1)}/30',
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        fontWeight: FontWeight.w600,
-                        color: Colors.amber[700],
-                      ),
-                    ),
-                  ],
-                ),
-              ],
             ],
           ),
         ),
       ),
+    );
+
+    // Swipe to reveal delete
+    if (onDelete != null) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+        child: Stack(
+          children: [
+            Positioned.fill(
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.error,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                alignment: Alignment.centerRight,
+                padding: const EdgeInsets.only(right: 24),
+                child: const Icon(Icons.delete, color: Colors.white, size: 28),
+              ),
+            ),
+            Dismissible(
+              key: ValueKey(corso.id),
+              direction: DismissDirection.endToStart,
+              confirmDismiss: (_) async {
+                onDelete!();
+                return false; // La conferma viene gestita dalla dialog
+              },
+              child: card,
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      child: card,
     );
   }
 }
@@ -186,7 +230,9 @@ class _InfoChip extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, size: 14, color: theme.colorScheme.onSurface.withValues(alpha: 0.5)),
+        Icon(icon,
+            size: 14,
+            color: theme.colorScheme.onSurface.withValues(alpha: 0.5)),
         const SizedBox(width: 4),
         Text(label,
             style: theme.textTheme.bodySmall?.copyWith(

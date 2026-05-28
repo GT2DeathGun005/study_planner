@@ -9,7 +9,7 @@ class Corso {
   final int semestre;
   final int cfu;
   final String descrizione;
-  final String stato; // da_iniziare, in_corso, completato, da_ripassare, superato
+  final String stato; // da_iniziare, in_corso, terminato, da_ripassare, superato
   final String tipoLaurea; // triennale, magistrale
   final int anno; // triennale: 1-3, magistrale: 1-2
   final int? votoPrevisto;
@@ -35,7 +35,7 @@ class Corso {
   static const List<String> statiDisponibili = [
     'da_iniziare',
     'in_corso',
-    'completato',
+    'terminato',
     'da_ripassare',
     'superato',
   ];
@@ -53,8 +53,8 @@ class Corso {
         return 'Da iniziare';
       case 'in_corso':
         return 'In corso';
-      case 'completato':
-        return 'Completato';
+      case 'terminato':
+        return 'Terminato';
       case 'da_ripassare':
         return 'Da ripassare';
       case 'superato':

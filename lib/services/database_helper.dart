@@ -22,7 +22,7 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 2,
+      version: 3,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
     );
@@ -104,6 +104,11 @@ class DatabaseHelper {
 
       await db.execute(
           "UPDATE esami SET stato = 'programmato' WHERE stato = 'annullato'");
+    }
+    if (oldVersion < 3) {
+      // Rinomina stato 'completato' -> 'terminato' nella tabella corsi
+      await db.execute(
+          "UPDATE corsi SET stato = 'terminato' WHERE stato = 'completato'");
     }
   }
 
