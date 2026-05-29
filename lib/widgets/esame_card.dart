@@ -50,13 +50,22 @@ class EsameCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final prioritaColor = _prioritaColor(esame.priorita);
-    final dateFormat = DateFormat('dd MMM yyyy', 'it_IT');
     final hasVoto = esame.voto != null;
     final votoColor = esame.superato ? Colors.amber[700]! : Colors.red;
+
+    // Formattazione data con mese abbreviato capitalizzato (es: 28 Mag 2026)
+    final dayStr = DateFormat('dd', 'it_IT').format(esame.data);
+    final monthStr = DateFormat('MMM', 'it_IT').format(esame.data);
+    final yearStr = DateFormat('yyyy', 'it_IT').format(esame.data);
+    final capitalizedMonth = monthStr.isEmpty
+        ? ''
+        : (monthStr[0].toUpperCase() + monthStr.substring(1));
+    final formattedDate = '$dayStr $capitalizedMonth $yearStr';
 
     final card = Card(
       margin: EdgeInsets.zero,
       elevation: 0,
+      clipBehavior: Clip.antiAlias,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
         side: BorderSide(color: prioritaColor.withValues(alpha: 0.3)),
@@ -64,76 +73,56 @@ class EsameCard extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(16),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
+        child: Stack(
+          children: [
+            // Contenuto principale
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Container(
-                    width: 4,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: prioritaColor,
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          esame.titolo,
-                          style: theme.textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w600,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+                  Row(
+                    children: [
+                      Container(
+                        width: 4,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          color: prioritaColor,
+                          borderRadius: BorderRadius.circular(2),
                         ),
-                        if (nomeCorso != null) ...[
-                          const SizedBox(height: 2),
-                          Text(
-                            nomeCorso!,
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: theme.colorScheme.onSurface
-                                  .withValues(alpha: 0.6),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Padding(
+                              padding: EdgeInsets.only(right: hasVoto ? 50 : 0),
+                              child: Text(
+                                esame.titolo,
+                                style: theme.textTheme.titleMedium?.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
                             ),
-                          ),
-                        ],
-                      ],
-                    ),
+                            if (nomeCorso != null) ...[
+                              const SizedBox(height: 2),
+                              Text(
+                                nomeCorso!,
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: theme.colorScheme.onSurface
+                                      .withValues(alpha: 0.6),
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
-                  // Voto a destra del titolo
-                  if (hasVoto) ...[
-                    const SizedBox(width: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: votoColor.withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.grade, size: 14, color: votoColor),
-                          const SizedBox(width: 4),
-                          Text(
-                            '${esame.voto}/30',
-                            style: theme.textTheme.labelMedium?.copyWith(
-                              fontWeight: FontWeight.w700,
-                              color: votoColor,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-              const SizedBox(height: 12),
+                  const SizedBox(height: 12),
               Row(
                 children: [
                   Icon(Icons.calendar_today,
@@ -142,7 +131,7 @@ class EsameCard extends StatelessWidget {
                           theme.colorScheme.onSurface.withValues(alpha: 0.5)),
                   const SizedBox(width: 4),
                   Text(
-                    dateFormat.format(esame.data),
+                    formattedDate,
                     style: theme.textTheme.bodySmall,
                   ),
                   const SizedBox(width: 12),
@@ -179,11 +168,11 @@ class EsameCard extends StatelessWidget {
                   const Spacer(),
                   Container(
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 8, vertical: 2),
+                        horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
                       color:
                           _statoColor(esame.stato).withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(20),
                     ),
                     child: Text(
                       Esame.statoLabel(esame.stato),
@@ -197,6 +186,31 @@ class EsameCard extends StatelessWidget {
               ),
             ],
           ),
+        ),
+            // Badge voto nell'angolo in alto a destra
+            if (hasVoto)
+              Positioned(
+                top: 0,
+                right: 0,
+                child: Container(
+                  padding: const EdgeInsets.only(
+                      left: 12, right: 10, top: 6, bottom: 8),
+                  decoration: BoxDecoration(
+                    color: votoColor.withValues(alpha: 0.15),
+                    borderRadius: const BorderRadius.only(
+                      bottomLeft: Radius.elliptical(24, 20),
+                    ),
+                  ),
+                  child: Text(
+                    '${esame.voto}',
+                    style: theme.textTheme.labelMedium?.copyWith(
+                      fontWeight: FontWeight.w800,
+                      color: votoColor,
+                    ),
+                  ),
+                ),
+              ),
+          ],
         ),
       ),
     );

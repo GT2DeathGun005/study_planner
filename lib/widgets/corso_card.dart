@@ -55,15 +55,26 @@ class CorsoCard extends StatelessWidget {
     }
   }
 
+  int _arrotondaVoto(double voto) {
+    final roundedDec = double.parse(voto.toStringAsFixed(2));
+    final intero = roundedDec.floor();
+    final decimale = roundedDec - intero;
+    return decimale > 0.5 ? (intero + 1) : intero;
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final color = _statoColor(corso.stato);
-    final hasVoto = votoCalcolato != null && votoCalcolato! > 0;
+    final int? votoIntero = votoCalcolato != null && votoCalcolato! > 0
+        ? _arrotondaVoto(votoCalcolato!)
+        : null;
+    final hasVoto = votoIntero != null;
 
     final card = Card(
       margin: EdgeInsets.zero,
       elevation: 0,
+      clipBehavior: Clip.antiAlias,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
         side: BorderSide(color: color.withValues(alpha: 0.3)),
@@ -71,111 +82,132 @@ class CorsoCard extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(16),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
+        child: Stack(
+          children: [
+            // Contenuto principale
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: color.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child:
-                        Icon(_statoIcon(corso.stato), color: color, size: 20),
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: color.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Icon(_statoIcon(corso.stato),
+                            color: color, size: 20),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Padding a destra per non sovrapporsi al badge voto
+                            Padding(
+                              padding: EdgeInsets.only(
+                                  right: hasVoto ? 60 : 0),
+                              child: Text(
+                                corso.nome,
+                                style:
+                                    theme.textTheme.titleMedium?.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              corso.docente,
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: theme.colorScheme.onSurface
+                                    .withValues(alpha: 0.6),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          corso.nome,
-                          style: theme.textTheme.titleMedium?.copyWith(
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      _InfoChip(
+                        icon: Icons.school,
+                        label: '${corso.cfu} CFU',
+                      ),
+                      const SizedBox(width: 8),
+                      _InfoChip(
+                        icon: Icons.calendar_today,
+                        label: '${corso.semestre}° Sem.',
+                      ),
+                      const SizedBox(width: 8),
+                      _InfoChip(
+                        icon: Icons.workspace_premium,
+                    label: '${Corso.tipoLaureaLabel(corso.tipoLaurea)[0]}${corso.anno}',
+                      ),
+                      const Spacer(),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: color.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          Corso.statoLabel(corso.stato),
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            color: color,
                             fontWeight: FontWeight.w600,
                           ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
                         ),
-                        const SizedBox(height: 2),
-                        Text(
-                          corso.docente,
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: theme.colorScheme.onSurface
-                                .withValues(alpha: 0.6),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  // Voto calcolato a destra del titolo
-                  if (hasVoto) ...[
-                    const SizedBox(width: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: Colors.amber.withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(10),
                       ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.grade, size: 14, color: Colors.amber[700]),
-                          const SizedBox(width: 4),
-                          Text(
-                            votoCalcolato!.toStringAsFixed(1),
-                            style: theme.textTheme.labelMedium?.copyWith(
-                              fontWeight: FontWeight.w700,
-                              color: Colors.amber[700],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  _InfoChip(
-                    icon: Icons.school,
-                    label: '${corso.cfu} CFU',
-                  ),
-                  const SizedBox(width: 8),
-                  _InfoChip(
-                    icon: Icons.calendar_today,
-                    label: '${corso.semestre}° Sem.',
-                  ),
-                  const SizedBox(width: 8),
-                  _InfoChip(
-                    icon: Icons.workspace_premium,
-                    label: '${Corso.tipoLaureaLabel(corso.tipoLaurea)[0]}${corso.anno}',
-                  ),
-                  const Spacer(),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: color.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Text(
-                      Corso.statoLabel(corso.stato),
-                      style: theme.textTheme.labelSmall?.copyWith(
-                        color: color,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
+                    ],
                   ),
                 ],
               ),
-            ],
-          ),
+            ),
+            // Badge voto nell'angolo in alto a destra
+            if (hasVoto)
+              Positioned(
+                top: 0,
+                right: 0,
+                child: Container(
+                  padding: const EdgeInsets.only(
+                      left: 12, right: 10, top: 6, bottom: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.amber.withValues(alpha: 0.15),
+                    borderRadius: const BorderRadius.only(
+                      bottomLeft: Radius.elliptical(24, 20),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        (corso.stato == 'superato')
+                            ? (corso.lode ? Icons.star_rounded : Icons.check_rounded)
+                            : Icons.star_rounded,
+                        size: 16,
+                        color: Colors.amber[700],
+                      ),
+                      const SizedBox(width: 3),
+                      Text(
+                        '$votoIntero',
+                        style: theme.textTheme.labelMedium?.copyWith(
+                          fontWeight: FontWeight.w800,
+                          color: Colors.amber[700],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+          ],
         ),
       ),
     );

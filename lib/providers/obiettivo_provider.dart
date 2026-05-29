@@ -2,29 +2,70 @@ import 'package:flutter/foundation.dart';
 import 'package:uuid/uuid.dart';
 import '../models/obiettivo.dart';
 import '../services/obiettivo_repository.dart';
+import '../services/attivita_repository.dart';
 
-/// Provider per la gestione dello stato degli Obiettivi/Task.
+/// Provider per la gestione dello stato degli Obiettivi.
 ///
-/// Gestisce la lista task, filtri per completamento e priorità,
-/// e l'aggiornamento del tempo dal timer Pomodoro.
+/// Gestisce la lista obiettivi, filtri per stato e priorità,
+/// e ricerca testuale.
 class ObiettivoProvider extends ChangeNotifier {
   final ObiettivoRepository _repository = ObiettivoRepository();
+  final AttivitaRepository _attivitaRepository = AttivitaRepository();
   final Uuid _uuid = const Uuid();
 
   List<Obiettivo> _obiettivi = [];
   bool _isLoading = false;
-  bool? _filtroCompletato;
-  String? _filtroPriorita;
+  List<String> _filtroStato = []; // 'prefissato' o 'raggiunto'
+  List<String> _filtroPriorita = [];
+  String _searchQuery = '';
+  String _sortBy = 'default';
+  bool _sortAscending = true;
+  Map<String, int> _pomodoriCompletatiMap = {};
 
   /// Lista obiettivi filtrata.
   List<Obiettivo> get obiettivi {
     var result = _obiettivi;
-    if (_filtroCompletato != null) {
-      result =
-          result.where((o) => o.completato == _filtroCompletato).toList();
+    if (_searchQuery.isNotEmpty) {
+      final query = _searchQuery.toLowerCase();
+      result = result
+          .where((o) =>
+              o.titolo.toLowerCase().contains(query) ||
+              o.descrizione.toLowerCase().contains(query))
+          .toList();
     }
-    if (_filtroPriorita != null) {
-      result = result.where((o) => o.priorita == _filtroPriorita).toList();
+    if (_filtroStato.isNotEmpty) {
+      result = result.where((o) => _filtroStato.contains(o.stato)).toList();
+    }
+    if (_filtroPriorita.isNotEmpty) {
+      result = result.where((o) => _filtroPriorita.contains(o.priorita)).toList();
+    }
+    
+    // Applica ordinamento
+    if (_sortBy != 'default') {
+      result = List.from(result);
+      if (_sortBy == 'titolo') {
+        result.sort((a, b) => _sortAscending
+            ? a.titolo.compareTo(b.titolo)
+            : b.titolo.compareTo(a.titolo));
+      } else if (_sortBy == 'data') {
+        int compareData(Obiettivo a, Obiettivo b) {
+          if (a.dataPianificata == null && b.dataPianificata == null) return 0;
+          if (a.dataPianificata == null) return 1;
+          if (b.dataPianificata == null) return -1;
+          return a.dataPianificata!.compareTo(b.dataPianificata!);
+        }
+        result.sort((a, b) => _sortAscending
+            ? compareData(a, b)
+            : compareData(b, a));
+      } else if (_sortBy == 'pomodori') {
+        result.sort((a, b) {
+          final countA = _pomodoriCompletatiMap[a.id] ?? 0;
+          final countB = _pomodoriCompletatiMap[b.id] ?? 0;
+          return _sortAscending
+              ? countA.compareTo(countB)
+              : countB.compareTo(countA);
+        });
+      }
     }
     return result;
   }
@@ -33,30 +74,15 @@ class ObiettivoProvider extends ChangeNotifier {
   List<Obiettivo> get tuttiObiettivi => _obiettivi;
 
   bool get isLoading => _isLoading;
-  bool? get filtroCompletato => _filtroCompletato;
-  String? get filtroPriorita => _filtroPriorita;
+  List<String> get filtroStato => _filtroStato;
+  List<String> get filtroPriorita => _filtroPriorita;
+  String get searchQuery => _searchQuery;
+  String get sortBy => _sortBy;
+  bool get sortAscending => _sortAscending;
 
-  /// Totale minuti di studio pianificati.
-  int get totaleTempoStimato =>
-      _obiettivi.fold(0, (sum, o) => sum + o.tempoStimato);
-
-  /// Totale minuti di studio effettuati.
-  int get totaleTempoEffettivo =>
-      _obiettivi.fold(0, (sum, o) => sum + o.tempoEffettivo);
-
-  /// Numero obiettivi completati.
-  int get completati => _obiettivi.where((o) => o.completato).length;
-
-  /// Tempo effettivo per corso (per grafici analytics).
-  Map<String, int> get tempoPerCorso {
-    final map = <String, int>{};
-    for (final o in _obiettivi) {
-      if (o.corsoId != null && o.tempoEffettivo > 0) {
-        map[o.corsoId!] = (map[o.corsoId!] ?? 0) + o.tempoEffettivo;
-      }
-    }
-    return map;
-  }
+  /// Numero obiettivi raggiunti.
+  int get raggiunti =>
+      _obiettivi.where((o) => o.stato == 'raggiunto').length;
 
   /// Carica tutti gli obiettivi dal database.
   Future<void> loadObiettivi() async {
@@ -64,6 +90,14 @@ class ObiettivoProvider extends ChangeNotifier {
     notifyListeners();
 
     _obiettivi = await _repository.getAll();
+    
+    // Carica tutti i pomodori svolti per gli obiettivi
+    final tutteAtt = await _attivitaRepository.getAll();
+    _pomodoriCompletatiMap = {};
+    for (final a in tutteAtt) {
+      _pomodoriCompletatiMap[a.obiettivoId] =
+          (_pomodoriCompletatiMap[a.obiettivoId] ?? 0) + a.pomodoroCompletati;
+    }
 
     _isLoading = false;
     notifyListeners();
@@ -74,24 +108,16 @@ class ObiettivoProvider extends ChangeNotifier {
     required String titolo,
     String descrizione = '',
     String? corsoId,
-    String? esameId,
     String priorita = 'media',
-    int tempoStimato = 0,
     DateTime? dataPianificata,
-    DateTime? dataScadenza,
-    String note = '',
   }) async {
     final obiettivo = Obiettivo(
       id: _uuid.v4(),
       titolo: titolo,
       descrizione: descrizione,
       corsoId: corsoId,
-      esameId: esameId,
       priorita: priorita,
-      tempoStimato: tempoStimato,
       dataPianificata: dataPianificata,
-      dataScadenza: dataScadenza,
-      note: note,
       createdAt: DateTime.now(),
     );
 
@@ -100,13 +126,22 @@ class ObiettivoProvider extends ChangeNotifier {
   }
 
   /// Aggiorna un obiettivo esistente.
+  /// Dopo il salvataggio, ri-verifica lo stato in base alle attività
+  /// per non sovrascrivere la transizione automatica prefissato/raggiunto.
   Future<void> updateObiettivo(Obiettivo obiettivo) async {
-    await _repository.update(obiettivo);
+    // Verifica lo stato basato sulle attività prima di salvare
+    final attivitaObiettivo =
+        await _attivitaRepository.getByObiettivoId(obiettivo.id);
+    final tutteCompletate = attivitaObiettivo.isNotEmpty &&
+        attivitaObiettivo.every((a) => a.completata);
+    final statoCorretto = tutteCompletate ? 'raggiunto' : 'prefissato';
+    await _repository.update(obiettivo.copyWith(stato: statoCorretto));
     await loadObiettivi();
   }
 
-  /// Elimina un obiettivo.
+  /// Elimina un obiettivo e le sue attività.
   Future<void> deleteObiettivo(String id) async {
+    await _attivitaRepository.deleteByObiettivoId(id);
     await _repository.delete(id);
     await loadObiettivi();
   }
@@ -116,31 +151,15 @@ class ObiettivoProvider extends ChangeNotifier {
     final obiettiviCorso =
         _obiettivi.where((o) => o.corsoId == corsoId).toList();
     for (final o in obiettiviCorso) {
+      await _attivitaRepository.deleteByObiettivoId(o.id);
       await _repository.delete(o.id);
     }
     await loadObiettivi();
   }
 
-  /// Elimina tutti gli obiettivi associati a un esame.
-  Future<void> deleteObiettiviByEsame(String esameId) async {
-    final obiettiviEsame =
-        _obiettivi.where((o) => o.esameId == esameId).toList();
-    for (final o in obiettiviEsame) {
-      await _repository.delete(o.id);
-    }
-    await loadObiettivi();
-  }
-
-  /// Toggle completamento di un obiettivo.
-  Future<void> toggleCompletato(String id) async {
-    final obiettivo = _obiettivi.firstWhere((o) => o.id == id);
-    await _repository.toggleCompletato(id, !obiettivo.completato);
-    await loadObiettivi();
-  }
-
-  /// Aggiorna il tempo effettivo (aggiunta dal Pomodoro).
-  Future<void> aggiungiTempo(String id, int minuti) async {
-    await _repository.updateTempoEffettivo(id, minuti);
+  /// Aggiorna lo stato di un obiettivo.
+  Future<void> setStato(String id, String stato) async {
+    await _repository.updateStato(id, stato);
     await loadObiettivi();
   }
 
@@ -154,22 +173,38 @@ class ObiettivoProvider extends ChangeNotifier {
     }).toList();
   }
 
-  /// Imposta il filtro per completamento.
-  void setFiltroCompletato(bool? completato) {
-    _filtroCompletato = completato;
+  /// Imposta il filtro per stato.
+  void setFiltroStato(List<String> stato) {
+    _filtroStato = List.from(stato);
     notifyListeners();
   }
 
   /// Imposta il filtro per priorità.
-  void setFiltroPriorita(String? priorita) {
-    _filtroPriorita = priorita;
+  void setFiltroPriorita(List<String> priorita) {
+    _filtroPriorita = List.from(priorita);
+    notifyListeners();
+  }
+
+  /// Imposta la query di ricerca.
+  void setSearchQuery(String query) {
+    _searchQuery = query;
+    notifyListeners();
+  }
+
+  /// Imposta l'ordinamento.
+  void setOrdinamento(String sortBy, bool ascending) {
+    _sortBy = sortBy;
+    _sortAscending = ascending;
     notifyListeners();
   }
 
   /// Resetta tutti i filtri.
   void resetFiltri() {
-    _filtroCompletato = null;
-    _filtroPriorita = null;
+    _filtroStato = [];
+    _filtroPriorita = [];
+    _searchQuery = '';
+    _sortBy = 'default';
+    _sortAscending = true;
     notifyListeners();
   }
 }

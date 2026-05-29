@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../../models/obiettivo.dart';
+import '../../providers/attivita_provider.dart';
 import '../../providers/corso_provider.dart';
 import '../../providers/esame_provider.dart';
 import '../../providers/obiettivo_provider.dart';
@@ -11,7 +11,7 @@ import '../../widgets/stat_card.dart';
 /// Schermata Profilo/Analytics.
 ///
 /// Dashboard con KPI, grafici, medie separate per Triennale/Magistrale,
-/// e scadenze imminenti.
+/// statistiche pomodori per tipologia e scadenze imminenti.
 class ProfiloScreen extends StatefulWidget {
   const ProfiloScreen({super.key});
   @override
@@ -28,6 +28,7 @@ class _ProfiloScreenState extends State<ProfiloScreen> {
       context.read<CorsoProvider>().loadCorsi();
       context.read<EsameProvider>().loadEsami();
       context.read<ObiettivoProvider>().loadObiettivi();
+      context.read<AttivitaProvider>().loadTutteAttivita();
     });
   }
 
@@ -37,17 +38,14 @@ class _ProfiloScreenState extends State<ProfiloScreen> {
     final df = DateFormat('dd MMM', 'it_IT');
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Profilo & Statistiche'), centerTitle: false),
+      appBar: AppBar(title: const Text('Profilo e Statistiche'), centerTitle: false),
       body: Consumer3<CorsoProvider, EsameProvider, ObiettivoProvider>(
         builder: (context, corsoProv, esameProv, obiProv, _) {
           final totCorsi = corsoProv.tuttiCorsi.length;
           final esamiSuperati = esameProv.esamiSuperati.length;
           final totEsami = esameProv.esami.length;
-          final taskCompletati = obiProv.completati;
-          final totTask = obiProv.tuttiObiettivi.length;
-          final tempoEffettivo = obiProv.totaleTempoEffettivo;
-          final tempoStimato = obiProv.totaleTempoStimato;
-          final tempoPerCorso = obiProv.tempoPerCorso;
+          final obiRaggiunti = obiProv.raggiunti;
+          final totObiettivi = obiProv.tuttiObiettivi.length;
           final scadenze = esameProv.scadenzeImminenti;
 
           // Calcola medie separate per Triennale e Magistrale
@@ -101,18 +99,26 @@ class _ProfiloScreenState extends State<ProfiloScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Container(
-                                padding: const EdgeInsets.all(8),
-                                decoration: BoxDecoration(
-                                  color: selectedColor.withValues(alpha: 0.1),
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                child: Icon(
-                                  _selectedLaurea == 'triennale'
-                                      ? Icons.looks_one
-                                      : Icons.looks_two,
-                                  color: selectedColor,
-                                  size: 22,
+                              InkWell(
+                                onTap: () {
+                                  setState(() {
+                                    _selectedLaurea = _selectedLaurea == 'triennale' ? 'magistrale' : 'triennale';
+                                  });
+                                },
+                                borderRadius: BorderRadius.circular(10),
+                                child: Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: selectedColor.withValues(alpha: 0.1),
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: Icon(
+                                    _selectedLaurea == 'triennale'
+                                        ? Icons.looks_one
+                                        : Icons.looks_two,
+                                    color: selectedColor,
+                                    size: 22,
+                                  ),
                                 ),
                               ),
                               const SizedBox(height: 12),
@@ -124,43 +130,15 @@ class _ProfiloScreenState extends State<ProfiloScreen> {
                                 ),
                               ),
                               const SizedBox(height: 4),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: selectedColor.withValues(alpha: 0.08),
-                                  borderRadius: BorderRadius.circular(10),
-                                  border: Border.all(color: selectedColor.withValues(alpha: 0.15)),
+                              Text(
+                                _selectedLaurea == 'triennale'
+                                    ? 'Media Triennale'
+                                    : 'Media Magistrale',
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
                                 ),
-                                child: DropdownButtonHideUnderline(
-                                  child: DropdownButton<String>(
-                                    value: _selectedLaurea,
-                                    isDense: true,
-                                    icon: Icon(Icons.arrow_drop_down, color: selectedColor, size: 16),
-                                    style: theme.textTheme.bodySmall?.copyWith(
-                                      color: selectedColor,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                    dropdownColor: theme.colorScheme.surface,
-                                    borderRadius: BorderRadius.circular(12),
-                                    onChanged: (String? newValue) {
-                                      if (newValue != null) {
-                                        setState(() {
-                                          _selectedLaurea = newValue;
-                                        });
-                                      }
-                                    },
-                                    items: const [
-                                      DropdownMenuItem<String>(
-                                        value: 'triennale',
-                                        child: Text('  Media Triennale'),
-                                      ),
-                                      DropdownMenuItem<String>(
-                                        value: 'magistrale',
-                                        child: Text('  Media Magistrale'),
-                                      ),
-                                    ],
-                                  ),
-                                ),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
                               ),
                             ],
                           ),
@@ -169,59 +147,146 @@ class _ProfiloScreenState extends State<ProfiloScreen> {
                     },
                   ),
                   StatCard(icon: Icons.emoji_events, value: '$esamiSuperati/$totEsami', label: 'Esami superati', color: Colors.green),
-                  StatCard(icon: Icons.check_circle, value: '$taskCompletati/$totTask', label: 'Task completati', color: Colors.purple),
+                  StatCard(icon: Icons.flag, value: '$obiRaggiunti/$totObiettivi', label: 'Obiettivi raggiunti', color: Colors.purple),
                 ],
               ),
               const SizedBox(height: 24),
 
-              // Ore studio: effettive vs pianificate
-              Text('Ore di Studio', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600)),
+              // Statistiche Studio (Pomodori)
+              Text('Studio e Pomodori', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600)),
               const SizedBox(height: 8),
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Column(
-                  children: [
-                    Row(mainAxisAlignment: MainAxisAlignment.spaceAround, children: [
-                      _LegendItem(color: theme.colorScheme.primary, label: 'Effettive: ${Obiettivo.formatMinuti(tempoEffettivo)}'),
-                      _LegendItem(color: Colors.orange, label: 'Pianificate: ${Obiettivo.formatMinuti(tempoStimato)}'),
-                    ]),
-                    const SizedBox(height: 16),
-                    SizedBox(
-                      height: 30,
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(8),
-                        child: LinearProgressIndicator(
-                          value: tempoStimato > 0 ? (tempoEffettivo / tempoStimato).clamp(0.0, 1.0) : 0,
-                          backgroundColor: Colors.orange.withValues(alpha: 0.3),
-                          color: theme.colorScheme.primary,
-                          minHeight: 30,
-                        ),
-                      ),
+              Consumer<AttivitaProvider>(
+                builder: (context, attProv, _) {
+                  final minutiTotali = attProv.minutiStudioTotali;
+                  final datterino = attProv.totaleDatterino;
+                  final sanMarzano = attProv.totaleSanMarzano;
+                  final cuoreDiBue = attProv.totaleCuoreDiBue;
+                  final pomodoroTotali = datterino + sanMarzano + cuoreDiBue;
+
+                  return Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 4),
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+                      borderRadius: BorderRadius.circular(16),
                     ),
-                  ],
-                ),
+                    child: Column(
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(8),
+                                    decoration: BoxDecoration(
+                                      color: theme.colorScheme.primary.withValues(alpha: 0.1),
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    child: Icon(Icons.timer, color: theme.colorScheme.primary, size: 22),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          Obiettivo.formatMinuti(minutiTotali),
+                                          style: theme.textTheme.titleLarge?.copyWith(
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                        Text(
+                                          'Tempo di studio',
+                                          style: theme.textTheme.bodySmall?.copyWith(
+                                            color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 48),
+                            Expanded(
+                              child: Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(8),
+                                    decoration: BoxDecoration(
+                                      color: Colors.deepOrange.withValues(alpha: 0.1),
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    child: const Text('🍅', style: TextStyle(fontSize: 16)),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          '$pomodoroTotali',
+                                          style: theme.textTheme.titleLarge?.copyWith(
+                                            fontWeight: FontWeight.bold,
+                                            color: Colors.deepOrange,
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                        Text(
+                                          'Pomodori totali',
+                                          style: theme.textTheme.bodySmall?.copyWith(
+                                            color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        const Divider(height: 1),
+                        const SizedBox(height: 16),
+                        // Pomodori per tipologia
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceAround,
+                          children: [
+                            _PomodoroTypeStat(
+                              label: 'Datterino',
+                              subLabel: '25 min',
+                              count: datterino,
+                              color: Colors.red.shade400,
+                            ),
+                            _PomodoroTypeStat(
+                              label: 'San Marzano',
+                              subLabel: '50 min',
+                              count: sanMarzano,
+                              color: Colors.deepOrange,
+                            ),
+                            _PomodoroTypeStat(
+                              label: 'Cuore di Bue',
+                              subLabel: '100 min',
+                              count: cuoreDiBue,
+                              color: Colors.red.shade800,
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  );
+                },
               ),
               const SizedBox(height: 24),
-
-              // Distribuzione tempo per corso (Pie chart)
-              if (tempoPerCorso.isNotEmpty) ...[
-                Text('Distribuzione per Corso', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600)),
-                const SizedBox(height: 8),
-                Container(
-                  height: 220,
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: _buildPieChart(tempoPerCorso, corsoProv, theme),
-                ),
-                const SizedBox(height: 24),
-              ],
 
               // Scadenze imminenti
               Text('Scadenze Imminenti', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600)),
@@ -255,71 +320,75 @@ class _ProfiloScreenState extends State<ProfiloScreen> {
       ),
     );
   }
+}
 
-  Widget _buildPieChart(Map<String, int> tempoPerCorso, CorsoProvider corsoProv, ThemeData theme) {
-    final colors = [Colors.blue, Colors.green, Colors.orange, Colors.purple, Colors.red, Colors.teal, Colors.pink, Colors.amber];
-    final entries = tempoPerCorso.entries.toList();
-    final total = entries.fold<int>(0, (sum, e) => sum + e.value);
+/// Statistica per singolo tipo di pomodoro.
+class _PomodoroTypeStat extends StatelessWidget {
+  final String label;
+  final String subLabel;
+  final int count;
+  final Color color;
 
-    return Row(
+  const _PomodoroTypeStat({
+    required this.label,
+    required this.subLabel,
+    required this.count,
+    required this.color,
+  });
+
+  String get assetPath {
+    switch (label) {
+      case 'Datterino':
+        return 'assets/Datterino.png';
+      case 'San Marzano':
+        return 'assets/San_Marzano.png';
+      case 'Cuore di Bue':
+        return 'assets/Cuore_di_Bue.png';
+      default:
+        return 'assets/Datterino.png';
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Column(
       children: [
-        Expanded(
-          child: PieChart(
-            PieChartData(
-              sections: entries.asMap().entries.map((e) {
-                final idx = e.key;
-                final entry = e.value;
-                final pct = total > 0 ? (entry.value / total * 100) : 0.0;
-                return PieChartSectionData(
-                  value: entry.value.toDouble(),
-                  color: colors[idx % colors.length],
-                  title: '${pct.toStringAsFixed(0)}%',
-                  titleStyle: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white),
-                  radius: 60,
-                );
-              }).toList(),
-              centerSpaceRadius: 20,
-              sectionsSpace: 2,
-            ),
+        Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Image.asset(
+            assetPath,
+            width: 24,
+            height: 24,
           ),
         ),
-        const SizedBox(width: 12),
-        Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: entries.asMap().entries.map((e) {
-            final idx = e.key;
-            final entry = e.value;
-            final corso = corsoProv.getCorsoById(entry.key);
-            return Padding(
-              padding: const EdgeInsets.symmetric(vertical: 2),
-              child: Row(children: [
-                Container(width: 10, height: 10, decoration: BoxDecoration(color: colors[idx % colors.length], shape: BoxShape.circle)),
-                const SizedBox(width: 6),
-                SizedBox(
-                  width: 100,
-                  child: Text(corso?.nome ?? '?', style: theme.textTheme.bodySmall, maxLines: 1, overflow: TextOverflow.ellipsis),
-                ),
-              ]),
-            );
-          }).toList(),
+        const SizedBox(height: 6),
+        Text(
+          '$count',
+          style: theme.textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.bold,
+            color: color,
+          ),
+        ),
+        Text(
+          label,
+          style: theme.textTheme.bodySmall?.copyWith(
+            fontWeight: FontWeight.w600,
+            fontSize: 11,
+          ),
+        ),
+        Text(
+          subLabel,
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
+            fontSize: 10,
+          ),
         ),
       ],
     );
-  }
-}
-
-
-class _LegendItem extends StatelessWidget {
-  final Color color;
-  final String label;
-  const _LegendItem({required this.color, required this.label});
-  @override
-  Widget build(BuildContext context) {
-    return Row(mainAxisSize: MainAxisSize.min, children: [
-      Container(width: 12, height: 12, decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(3))),
-      const SizedBox(width: 6),
-      Text(label, style: Theme.of(context).textTheme.bodySmall),
-    ]);
   }
 }

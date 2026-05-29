@@ -1,20 +1,15 @@
-/// Modello dati per un Obiettivo o Task di studio.
+/// Modello dati per un Obiettivo di studio.
 ///
-/// Rappresenta un'attività pianificata: sessione di studio, ripasso,
-/// esercitazione, consegna, ecc. Può essere associata a un corso e/o esame.
+/// Rappresenta un obiettivo macro che può contenere più attività.
+/// Lo stato passa a 'raggiunto' quando tutte le attività sono completate.
 class Obiettivo {
   final String id;
   final String titolo;
   final String descrizione;
   final String? corsoId;
-  final String? esameId;
   final String priorita; // alta, media, bassa
-  final int tempoStimato; // minuti
-  final int tempoEffettivo; // minuti accumulati (Pomodoro)
-  final bool completato;
+  final String stato; // prefissato, raggiunto
   final DateTime? dataPianificata;
-  final DateTime? dataScadenza;
-  final String note;
   final DateTime createdAt;
 
   const Obiettivo({
@@ -22,16 +17,26 @@ class Obiettivo {
     required this.titolo,
     this.descrizione = '',
     this.corsoId,
-    this.esameId,
     this.priorita = 'media',
-    this.tempoStimato = 0,
-    this.tempoEffettivo = 0,
-    this.completato = false,
+    this.stato = 'prefissato',
     this.dataPianificata,
-    this.dataScadenza,
-    this.note = '',
     required this.createdAt,
   });
+
+  /// Stati disponibili per un obiettivo.
+  static const List<String> statiDisponibili = ['prefissato', 'raggiunto'];
+
+  /// Label leggibile per lo stato.
+  static String statoLabel(String s) {
+    switch (s) {
+      case 'prefissato':
+        return 'Prefissato';
+      case 'raggiunto':
+        return 'Raggiunto';
+      default:
+        return s;
+    }
+  }
 
   /// Priorità disponibili.
   static const List<String> prioritaDisponibili = [
@@ -64,12 +69,6 @@ class Obiettivo {
     return '${min}m';
   }
 
-  /// Percentuale di completamento basata sul tempo.
-  double get progressoTempo {
-    if (tempoStimato <= 0) return 0.0;
-    return (tempoEffettivo / tempoStimato).clamp(0.0, 1.0);
-  }
-
   /// Converte il modello in una Map per SQLite.
   Map<String, dynamic> toMap() {
     return {
@@ -77,14 +76,9 @@ class Obiettivo {
       'titolo': titolo,
       'descrizione': descrizione,
       'corso_id': corsoId,
-      'esame_id': esameId,
       'priorita': priorita,
-      'tempo_stimato': tempoStimato,
-      'tempo_effettivo': tempoEffettivo,
-      'completato': completato ? 1 : 0,
+      'stato': stato,
       'data_pianificata': dataPianificata?.toIso8601String(),
-      'data_scadenza': dataScadenza?.toIso8601String(),
-      'note': note,
       'created_at': createdAt.toIso8601String(),
     };
   }
@@ -96,18 +90,11 @@ class Obiettivo {
       titolo: map['titolo'] as String,
       descrizione: (map['descrizione'] as String?) ?? '',
       corsoId: map['corso_id'] as String?,
-      esameId: map['esame_id'] as String?,
       priorita: (map['priorita'] as String?) ?? 'media',
-      tempoStimato: (map['tempo_stimato'] as int?) ?? 0,
-      tempoEffettivo: (map['tempo_effettivo'] as int?) ?? 0,
-      completato: (map['completato'] as int?) == 1,
+      stato: (map['stato'] as String?) ?? 'prefissato',
       dataPianificata: map['data_pianificata'] != null
           ? DateTime.parse(map['data_pianificata'] as String)
           : null,
-      dataScadenza: map['data_scadenza'] != null
-          ? DateTime.parse(map['data_scadenza'] as String)
-          : null,
-      note: (map['note'] as String?) ?? '',
       createdAt: DateTime.parse(map['created_at'] as String),
     );
   }
@@ -119,17 +106,10 @@ class Obiettivo {
     String? descrizione,
     String? corsoId,
     bool clearCorsoId = false,
-    String? esameId,
-    bool clearEsameId = false,
     String? priorita,
-    int? tempoStimato,
-    int? tempoEffettivo,
-    bool? completato,
+    String? stato,
     DateTime? dataPianificata,
     bool clearDataPianificata = false,
-    DateTime? dataScadenza,
-    bool clearDataScadenza = false,
-    String? note,
     DateTime? createdAt,
   }) {
     return Obiettivo(
@@ -137,17 +117,11 @@ class Obiettivo {
       titolo: titolo ?? this.titolo,
       descrizione: descrizione ?? this.descrizione,
       corsoId: clearCorsoId ? null : (corsoId ?? this.corsoId),
-      esameId: clearEsameId ? null : (esameId ?? this.esameId),
       priorita: priorita ?? this.priorita,
-      tempoStimato: tempoStimato ?? this.tempoStimato,
-      tempoEffettivo: tempoEffettivo ?? this.tempoEffettivo,
-      completato: completato ?? this.completato,
+      stato: stato ?? this.stato,
       dataPianificata: clearDataPianificata
           ? null
           : (dataPianificata ?? this.dataPianificata),
-      dataScadenza:
-          clearDataScadenza ? null : (dataScadenza ?? this.dataScadenza),
-      note: note ?? this.note,
       createdAt: createdAt ?? this.createdAt,
     );
   }

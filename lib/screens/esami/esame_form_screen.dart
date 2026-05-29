@@ -42,13 +42,20 @@ class _EsameFormScreenState extends State<EsameFormScreen> {
   void initState() {
     super.initState();
     final e = widget.esame;
+    _corsoId = e?.corsoId ?? widget.corsoId!;
     _titoloController = TextEditingController(text: e?.titolo ?? '');
     _noteController = TextEditingController(text: e?.note ?? '');
     _votoController =
         TextEditingController(text: e?.voto?.toString() ?? '');
+
+    final esameProv = context.read<EsameProvider>();
+    final disponibile = esameProv.getPercentualeDisponibile(
+      _corsoId,
+      excludeEsameId: e?.id,
+    );
+
     _pesoController = TextEditingController(
-        text: e?.pesoPercentuale.toString() ?? '100');
-    _corsoId = e?.corsoId ?? widget.corsoId!;
+        text: e?.pesoPercentuale.toString() ?? '${disponibile.toInt()}');
     _data = e?.data ?? DateTime.now().add(const Duration(days: 7));
     _tipologia = e?.tipologia ?? 'scritto';
     _priorita = e?.priorita ?? 'media';
@@ -118,8 +125,7 @@ class _EsameFormScreenState extends State<EsameFormScreen> {
                 _DetailRow(
                     icon: Icons.calendar_today,
                     label: 'Data',
-                    value: DateFormat('dd MMMM yyyy', 'it_IT')
-                        .format(esame.data)),
+                    value: _getFormattedDate(esame.data)),
                 _DetailRow(
                     icon: Icons.category,
                     label: 'Tipologia',
@@ -129,7 +135,7 @@ class _EsameFormScreenState extends State<EsameFormScreen> {
                     label: 'Priorità',
                     value: Esame.prioritaLabel(esame.priorita)),
                 _DetailRow(
-                    icon: Icons.flag,
+                    icon: Icons.traffic,
                     label: 'Stato',
                     value: Esame.statoLabel(esame.stato)),
                 _DetailRow(
@@ -189,11 +195,13 @@ class _EsameFormScreenState extends State<EsameFormScreen> {
             leading: const Icon(Icons.calendar_today),
             title: const Text('Data'),
             subtitle:
-                Text(DateFormat('dd MMMM yyyy', 'it_IT').format(_data)),
+                Text(_getFormattedDate(_data)),
             trailing: const Icon(Icons.chevron_right),
             onTap: _pickDate,
           ),
+
           const Divider(),
+          const SizedBox(height: 16),
 
           // Tipologia e Priorità
           Row(
@@ -244,7 +252,7 @@ class _EsameFormScreenState extends State<EsameFormScreen> {
             initialValue: _stato,
             decoration: const InputDecoration(
               labelText: 'Stato',
-              prefixIcon: Icon(Icons.flag),
+              prefixIcon: Icon(Icons.traffic),
             ),
             items: Esame.statiDisponibili.map((s) {
               return DropdownMenuItem(
@@ -305,7 +313,6 @@ class _EsameFormScreenState extends State<EsameFormScreen> {
             decoration: const InputDecoration(
               labelText: 'Note',
               prefixIcon: Icon(Icons.notes),
-              alignLabelWithHint: true,
             ),
             maxLines: 3,
           ),
@@ -364,6 +371,16 @@ class _EsameFormScreenState extends State<EsameFormScreen> {
     );
   }
 
+  String _getFormattedDate(DateTime date) {
+    final dayStr = DateFormat('dd', 'it_IT').format(date);
+    final monthStr = DateFormat('MMMM', 'it_IT').format(date);
+    final yearStr = DateFormat('yyyy', 'it_IT').format(date);
+    final capitalizedMonth = monthStr.isEmpty
+        ? ''
+        : (monthStr[0].toUpperCase() + monthStr.substring(1));
+    return '$dayStr $capitalizedMonth $yearStr';
+  }
+
   Future<void> _pickDate() async {
     final picked = await showDatePicker(
       context: context,
@@ -375,6 +392,13 @@ class _EsameFormScreenState extends State<EsameFormScreen> {
     if (picked != null) {
       setState(() => _data = picked);
     }
+  }
+
+  int _arrotondaVoto(double voto) {
+    final roundedDec = double.parse(voto.toStringAsFixed(2));
+    final intero = roundedDec.floor();
+    final decimale = roundedDec - intero;
+    return decimale > 0.5 ? (intero + 1) : intero;
   }
 
   void _save() async {
@@ -416,14 +440,14 @@ class _EsameFormScreenState extends State<EsameFormScreen> {
     // Controlla se il corso deve passare automaticamente a "superato":
     // - Il peso totale degli esami ha raggiunto il 100%
     // - Tutti gli esami del corso sono completati con un voto
-    _checkAutoSuperato(corsoProv, esameProv);
+    await _checkAutoSuperato(corsoProv, esameProv);
 
     if (mounted) Navigator.pop(context);
   }
 
   /// Verifica se il corso deve passare automaticamente allo stato 'superato'.
   /// Condizioni: peso totale = 100% e tutti gli esami completati con voto.
-  void _checkAutoSuperato(CorsoProvider corsoProv, EsameProvider esameProv) {
+  Future<void> _checkAutoSuperato(CorsoProvider corsoProv, EsameProvider esameProv) async {
     final pesoTotale = esameProv.getPercentualeTotale(_corsoId);
     if (pesoTotale < 100) return;
 
@@ -436,8 +460,45 @@ class _EsameFormScreenState extends State<EsameFormScreen> {
 
     if (tuttiCompletati) {
       final corso = corsoProv.getCorsoById(_corsoId);
-      if (corso != null && corso.stato != 'superato') {
-        corsoProv.updateCorso(corso.copyWith(stato: 'superato'));
+      if (corso != null) {
+        final votoCalcolato = esameProv.calcolaVotoCorso(_corsoId);
+        final votoArrotondato = _arrotondaVoto(votoCalcolato);
+        
+        bool lode = false;
+        if (votoArrotondato == 30) {
+          if (mounted) {
+            final answer = await showDialog<bool>(
+              context: context,
+              barrierDismissible: false,
+              builder: (context) {
+                return AlertDialog(
+                  title: const Text('Corso Completato! 🎉'),
+                  content: const Text(
+                    'Il voto complessivo calcolato è 30. Questo corso è stato superato con lode?'
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context, false),
+                      child: const Text('No'),
+                    ),
+                    ElevatedButton(
+                      onPressed: () => Navigator.pop(context, true),
+                      child: const Text('Sì, con lode'),
+                    ),
+                  ],
+                );
+              },
+            );
+            lode = answer ?? false;
+          }
+        }
+        
+        await corsoProv.updateCorso(
+          corso.copyWith(
+            stato: 'superato',
+            lode: lode,
+          ),
+        );
       }
     }
   }

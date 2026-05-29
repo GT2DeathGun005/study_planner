@@ -14,12 +14,14 @@ class CorsoProvider extends ChangeNotifier {
   List<Corso> _corsi = [];
   bool _isLoading = false;
   String _searchQuery = '';
-  String? _filtroStato;
-  int? _filtroSemestre;
-  String? _filtroTipoLaurea;
-  int? _filtroAnno;
+  List<String> _filtroStato = [];
+  List<int> _filtroSemestre = [];
+  List<String> _filtroTipoLaurea = [];
+  List<int> _filtroAnno = [];
   int? _filtroCfuMin;
   int? _filtroCfuMax;
+  String _sortBy = 'default';
+  bool _sortAscending = true;
 
   /// Lista corsi filtrata in base a ricerca e filtri attivi.
   List<Corso> get corsi {
@@ -30,24 +32,65 @@ class CorsoProvider extends ChangeNotifier {
               c.nome.toLowerCase().contains(_searchQuery.toLowerCase()))
           .toList();
     }
-    if (_filtroStato != null) {
-      result = result.where((c) => c.stato == _filtroStato).toList();
+    if (_filtroStato.isNotEmpty) {
+      result = result.where((c) => _filtroStato.contains(c.stato)).toList();
     }
-    if (_filtroSemestre != null) {
-      result = result.where((c) => c.semestre == _filtroSemestre).toList();
+    if (_filtroSemestre.isNotEmpty) {
+      result = result.where((c) => _filtroSemestre.contains(c.semestre)).toList();
     }
-    if (_filtroTipoLaurea != null) {
+    if (_filtroTipoLaurea.isNotEmpty) {
       result =
-          result.where((c) => c.tipoLaurea == _filtroTipoLaurea).toList();
+          result.where((c) => _filtroTipoLaurea.contains(c.tipoLaurea)).toList();
     }
-    if (_filtroAnno != null) {
-      result = result.where((c) => c.anno == _filtroAnno).toList();
+    if (_filtroAnno.isNotEmpty) {
+      result = result.where((c) => _filtroAnno.contains(c.anno)).toList();
     }
     if (_filtroCfuMin != null) {
       result = result.where((c) => c.cfu >= _filtroCfuMin!).toList();
     }
     if (_filtroCfuMax != null) {
       result = result.where((c) => c.cfu <= _filtroCfuMax!).toList();
+    }
+    
+    // Applica ordinamento
+    if (_sortBy != 'default') {
+      result = List.from(result);
+      if (_sortBy == 'titolo') {
+        result.sort((a, b) => _sortAscending
+            ? a.nome.compareTo(b.nome)
+            : b.nome.compareTo(a.nome));
+      } else if (_sortBy == 'anno_semestre') {
+        int compareAnnoSemestre(Corso a, Corso b) {
+          final aLaurea = a.tipoLaurea == 'triennale' ? 0 : 1;
+          final bLaurea = b.tipoLaurea == 'triennale' ? 0 : 1;
+          if (aLaurea != bLaurea) {
+            return aLaurea.compareTo(bLaurea);
+          }
+          if (a.anno != b.anno) {
+            return a.anno.compareTo(b.anno);
+          }
+          return a.semestre.compareTo(b.semestre);
+        }
+        result.sort((a, b) => _sortAscending
+            ? compareAnnoSemestre(a, b)
+            : compareAnnoSemestre(b, a));
+      } else if (_sortBy == 'stato') {
+        const statoOrder = {
+          'da_iniziare': 0,
+          'in_corso': 1,
+          'terminato': 2,
+          'da_ripassare': 3,
+          'superato': 4,
+        };
+        int compareStato(Corso a, Corso b) {
+          final wA = statoOrder[a.stato] ?? 0;
+          final wB = statoOrder[b.stato] ?? 0;
+          return wA.compareTo(wB);
+        }
+        result.sort((a, b) => _sortAscending
+            ? compareStato(a, b)
+            : compareStato(b, a));
+      }
     }
     return result;
   }
@@ -57,20 +100,22 @@ class CorsoProvider extends ChangeNotifier {
 
   bool get isLoading => _isLoading;
   String get searchQuery => _searchQuery;
-  String? get filtroStato => _filtroStato;
-  int? get filtroSemestre => _filtroSemestre;
-  String? get filtroTipoLaurea => _filtroTipoLaurea;
-  int? get filtroAnno => _filtroAnno;
+  List<String> get filtroStato => _filtroStato;
+  List<int> get filtroSemestre => _filtroSemestre;
+  List<String> get filtroTipoLaurea => _filtroTipoLaurea;
+  List<int> get filtroAnno => _filtroAnno;
   int? get filtroCfuMin => _filtroCfuMin;
   int? get filtroCfuMax => _filtroCfuMax;
+  String get sortBy => _sortBy;
+  bool get sortAscending => _sortAscending;
 
   /// Numero di filtri attivi (esclusa la ricerca).
   int get filtriAttiviCount {
     int count = 0;
-    if (_filtroStato != null) count++;
-    if (_filtroSemestre != null) count++;
-    if (_filtroTipoLaurea != null) count++;
-    if (_filtroAnno != null) count++;
+    if (_filtroStato.isNotEmpty) count++;
+    if (_filtroSemestre.isNotEmpty) count++;
+    if (_filtroTipoLaurea.isNotEmpty) count++;
+    if (_filtroAnno.isNotEmpty) count++;
     if (_filtroCfuMin != null || _filtroCfuMax != null) count++;
     return count;
   }
@@ -98,6 +143,7 @@ class CorsoProvider extends ChangeNotifier {
     int anno = 1,
     int? votoPrevisto,
     String materiali = '',
+    bool lode = false,
   }) async {
     final corso = Corso(
       id: _uuid.v4(),
@@ -112,6 +158,7 @@ class CorsoProvider extends ChangeNotifier {
       votoPrevisto: votoPrevisto,
       materiali: materiali,
       createdAt: DateTime.now(),
+      lode: lode,
     );
 
     await _repository.insert(corso);
@@ -146,33 +193,31 @@ class CorsoProvider extends ChangeNotifier {
   }
 
   /// Imposta il filtro per stato.
-  void setFiltroStato(String? stato) {
-    _filtroStato = stato;
+  void setFiltroStato(List<String> stato) {
+    _filtroStato = List.from(stato);
     notifyListeners();
   }
 
   /// Imposta il filtro per semestre.
-  void setFiltroSemestre(int? semestre) {
-    _filtroSemestre = semestre;
+  void setFiltroSemestre(List<int> semestre) {
+    _filtroSemestre = List.from(semestre);
     notifyListeners();
   }
 
   /// Imposta il filtro per tipo laurea.
-  void setFiltroTipoLaurea(String? tipoLaurea) {
-    _filtroTipoLaurea = tipoLaurea;
-    // Reset anno se il tipo laurea cambia
-    if (tipoLaurea != null && _filtroAnno != null) {
-      final anniValidi = Corso.anniPerTipo(tipoLaurea);
-      if (!anniValidi.contains(_filtroAnno)) {
-        _filtroAnno = null;
-      }
+  void setFiltroTipoLaurea(List<String> tipoLaurea) {
+    _filtroTipoLaurea = List.from(tipoLaurea);
+    // Reset anni non validi per i tipi laurea selezionati
+    if (_filtroTipoLaurea.isNotEmpty && _filtroAnno.isNotEmpty) {
+      final allAnniValidi = _filtroTipoLaurea.expand((tl) => Corso.anniPerTipo(tl)).toSet();
+      _filtroAnno.removeWhere((a) => !allAnniValidi.contains(a));
     }
     notifyListeners();
   }
 
   /// Imposta il filtro per anno.
-  void setFiltroAnno(int? anno) {
-    _filtroAnno = anno;
+  void setFiltroAnno(List<int> anno) {
+    _filtroAnno = List.from(anno);
     notifyListeners();
   }
 
@@ -183,15 +228,24 @@ class CorsoProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Imposta l'ordinamento.
+  void setOrdinamento(String sortBy, bool ascending) {
+    _sortBy = sortBy;
+    _sortAscending = ascending;
+    notifyListeners();
+  }
+
   /// Resetta tutti i filtri.
   void resetFiltri() {
     _searchQuery = '';
-    _filtroStato = null;
-    _filtroSemestre = null;
-    _filtroTipoLaurea = null;
-    _filtroAnno = null;
+    _filtroStato = [];
+    _filtroSemestre = [];
+    _filtroTipoLaurea = [];
+    _filtroAnno = [];
     _filtroCfuMin = null;
     _filtroCfuMax = null;
+    _sortBy = 'default';
+    _sortAscending = true;
     notifyListeners();
   }
 }

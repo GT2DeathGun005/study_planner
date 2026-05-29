@@ -5,7 +5,9 @@ import 'package:table_calendar/table_calendar.dart';
 import '../../providers/corso_provider.dart';
 import '../../providers/esame_provider.dart';
 import '../../providers/obiettivo_provider.dart';
+import '../obiettivi/obiettivo_detail_screen.dart';
 import '../obiettivi/obiettivo_form_screen.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 /// Schermata Calendario (Feature Avanzata 1).
 ///
@@ -184,24 +186,20 @@ class _CalendarioScreenState extends State<CalendarioScreen> {
                           // Obiettivi del giorno
                           ...obiettiviGiorno.map((obi) {
                             final corso = obi.corsoId != null ? corsoProv.getCorsoById(obi.corsoId!) : null;
+                            final isRaggiunto = obi.stato == 'raggiunto';
                             return ListTile(
                               leading: Container(
                                 padding: const EdgeInsets.all(8),
                                 decoration: BoxDecoration(
-                                  color: obi.completato ? Colors.green.withValues(alpha: 0.1) : Colors.blue.withValues(alpha: 0.1),
+                                  color: Colors.amber.withValues(alpha: 0.1),
                                   borderRadius: BorderRadius.circular(8),
                                 ),
-                                child: Icon(
-                                  obi.completato ? Icons.check_circle : Icons.flag,
-                                  color: obi.completato ? Colors.green : Colors.blue,
-                                  size: 20,
-                                ),
+                                child: Icon(Symbols.file_map_stack,  color: Colors.amber[700], size: 20,),
                               ),
-                              title: Text(obi.titolo, style: TextStyle(decoration: obi.completato ? TextDecoration.lineThrough : null)),
-                              subtitle: Text(corso?.nome ?? obi.descrizione),
-                              trailing: Text(obi.tempoStimato > 0 ? '${obi.tempoStimato}m' : '', style: theme.textTheme.bodySmall),
+                              title: Text(obi.titolo, style: TextStyle(decoration: isRaggiunto ? TextDecoration.lineThrough : null)),
+                              subtitle: Text(corso?.nome ?? (obi.descrizione != '' ? obi.descrizione : 'Nessuna descrizione')),
                               onTap: () {
-                                Navigator.push(context, MaterialPageRoute(builder: (_) => ObiettivoFormScreen(obiettivo: obi)));
+                                Navigator.push(context, MaterialPageRoute(builder: (_) => ObiettivoDetailScreen(obiettivo: obi)));
                               },
                             );
                           }),

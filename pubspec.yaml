@@ -20,6 +20,8 @@ dependencies:
   intl: ^0.20.2
   uuid: ^4.5.1
   sqflite_common_ffi: ^2.4.0+3
+  sensors_plus: ^7.0.0
+  material_symbols_icons: ^4.2928.1
 
 dev_dependencies:
   flutter_test:
@@ -35,3 +37,7 @@ flutter_launcher_icons:
 
 flutter:
   uses-material-design: true
+  assets:
+    - assets/Datterino.png
+    - assets/San_Marzano.png
+    - assets/Cuore_di_Bue.png

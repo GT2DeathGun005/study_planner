@@ -15,6 +15,7 @@ class Corso {
   final int? votoPrevisto;
   final String materiali;
   final DateTime createdAt;
+  final bool lode;
 
   const Corso({
     required this.id,
@@ -29,6 +30,7 @@ class Corso {
     this.votoPrevisto,
     this.materiali = '',
     required this.createdAt,
+    this.lode = false,
   });
 
   /// Stati disponibili per un corso.
@@ -103,6 +105,7 @@ class Corso {
       'voto_previsto': votoPrevisto,
       'materiali': materiali,
       'created_at': createdAt.toIso8601String(),
+      'lode': lode ? 1 : 0,
     };
   }
 
@@ -121,6 +124,7 @@ class Corso {
       votoPrevisto: map['voto_previsto'] as int?,
       materiali: (map['materiali'] as String?) ?? '',
       createdAt: DateTime.parse(map['created_at'] as String),
+      lode: (map['lode'] as int?) == 1,
     );
   }
 
@@ -139,6 +143,7 @@ class Corso {
     bool clearVotoPrevisto = false,
     String? materiali,
     DateTime? createdAt,
+    bool? lode,
   }) {
     return Corso(
       id: id ?? this.id,
@@ -153,6 +158,7 @@ class Corso {
       votoPrevisto: clearVotoPrevisto ? null : (votoPrevisto ?? this.votoPrevisto),
       materiali: materiali ?? this.materiali,
       createdAt: createdAt ?? this.createdAt,
+      lode: lode ?? this.lode,
     );
   }
 }

@@ -80,8 +80,19 @@ class _CorsoFormScreenState extends State<CorsoFormScreen> {
                   labelText: 'Nome del corso *',
                   prefixIcon: Icon(Icons.book),
                 ),
-                validator: (v) =>
-                    v == null || v.trim().isEmpty ? 'Campo obbligatorio' : null,
+                validator: (v) {
+                  if (v == null || v.trim().isEmpty) {
+                    return 'Campo obbligatorio';
+                  }
+                  final trimmed = v.trim().toLowerCase();
+                  final exists = context.read<CorsoProvider>().tuttiCorsi.any(
+                    (c) => c.nome.trim().toLowerCase() == trimmed && c.id != widget.corso?.id
+                  );
+                  if (exists) {
+                    return 'Esiste già un corso con questo nome';
+                  }
+                  return null;
+                },
               ),
               const SizedBox(height: 16),
 
@@ -198,7 +209,7 @@ class _CorsoFormScreenState extends State<CorsoFormScreen> {
                 initialValue: _stato,
                 decoration: const InputDecoration(
                   labelText: 'Stato',
-                  prefixIcon: Icon(Icons.flag),
+                  prefixIcon: Icon(Icons.traffic),
                 ),
                 items: Corso.statiDisponibili.map((stato) {
                   return DropdownMenuItem(
@@ -212,33 +223,11 @@ class _CorsoFormScreenState extends State<CorsoFormScreen> {
               ),
               const SizedBox(height: 16),
 
-              // Descrizione
-              TextFormField(
-                controller: _descrizioneController,
-                decoration: const InputDecoration(
-                  labelText: 'Descrizione / Note',
-                  prefixIcon: Icon(Icons.notes),
-                  alignLabelWithHint: true,
-                ),
-                maxLines: 3,
-              ),
-              const SizedBox(height: 16),
-
-              // Materiali
-              TextFormField(
-                controller: _materialiController,
-                decoration: const InputDecoration(
-                  labelText: 'Materiali / Riferimenti',
-                  prefixIcon: Icon(Icons.link),
-                ),
-              ),
-              const SizedBox(height: 16),
-
               // Voto previsto
               TextFormField(
                 controller: _votoPrevistoController,
                 decoration: const InputDecoration(
-                  labelText: 'Voto previsto (obiettivo)',
+                  labelText: 'Voto previsto',
                   prefixIcon: Icon(Icons.trending_up),
                 ),
                 keyboardType: TextInputType.number,
@@ -251,6 +240,27 @@ class _CorsoFormScreenState extends State<CorsoFormScreen> {
                   }
                   return null;
                 },
+              ),
+              const SizedBox(height: 16),
+
+              // Descrizione
+              TextFormField(
+                controller: _descrizioneController,
+                decoration: const InputDecoration(
+                  labelText: 'Descrizione / Note',
+                  prefixIcon: Icon(Icons.notes),
+                ),
+                maxLines: 3,
+              ),
+              const SizedBox(height: 16),
+
+              // Materiali
+              TextFormField(
+                controller: _materialiController,
+                decoration: const InputDecoration(
+                  labelText: 'Materiali / Riferimenti',
+                  prefixIcon: Icon(Icons.link),
+                ),
               ),
 
               const SizedBox(height: 32),

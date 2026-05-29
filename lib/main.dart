@@ -5,6 +5,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:provider/provider.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+import 'providers/attivita_provider.dart';
 import 'providers/corso_provider.dart';
 import 'providers/esame_provider.dart';
 import 'providers/obiettivo_provider.dart';
@@ -45,6 +46,7 @@ class StudyPlannerApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => CorsoProvider()),
         ChangeNotifierProvider(create: (_) => EsameProvider()),
         ChangeNotifierProvider(create: (_) => ObiettivoProvider()),
+        ChangeNotifierProvider(create: (_) => AttivitaProvider()),
       ],
       child: MaterialApp(
         title: 'Study Planner',

@@ -3,7 +3,6 @@ import 'package:provider/provider.dart';
 import '../../models/corso.dart';
 import '../../providers/corso_provider.dart';
 import '../../providers/esame_provider.dart';
-import '../../providers/obiettivo_provider.dart';
 import '../../widgets/esame_card.dart';
 import 'corso_form_screen.dart';
 import 'esame_form_screen.dart';
@@ -134,9 +133,7 @@ class _CorsoDetailScreenState extends State<CorsoDetailScreen> {
                           ),
                         );
                       },
-                      onDelete: esame.stato == 'completato'
-                          ? null
-                          : () => _confirmDeleteEsame(context, esame.id),
+                      onDelete: () => _confirmDeleteEsame(context, esame.id),
                     )),
             ],
           ),
@@ -194,7 +191,7 @@ class _CorsoDetailScreenState extends State<CorsoDetailScreen> {
                 label: 'Tipo Laurea',
                 value: Corso.tipoLaureaLabel(corso.tipoLaurea)),
             _DetailRow(
-                icon: Icons.flag,
+                icon: Icons.traffic,
                 label: 'Stato',
                 value: Corso.statoLabel(corso.stato)),
             if (corso.votoPrevisto != null)
@@ -250,12 +247,25 @@ class _CorsoDetailScreenState extends State<CorsoDetailScreen> {
             child: const Text('Annulla'),
           ),
           TextButton(
-            onPressed: () {
-              // Elimina prima gli obiettivi associati all'esame
-              context.read<ObiettivoProvider>().deleteObiettiviByEsame(esameId);
-              // Poi elimina l'esame
-              context.read<EsameProvider>().deleteEsame(esameId);
-              Navigator.pop(ctx);
+            onPressed: () async {
+              final navigator = Navigator.of(ctx);
+              // Elimina l'esame
+              final esameProv = context.read<EsameProvider>();
+              final corsoProv = context.read<CorsoProvider>();
+              await esameProv.deleteEsame(esameId);
+              
+              // Dopo l'eliminazione, ricalcoliamo il peso totale e controlliamo se dobbiamo ripristinare lo stato del corso
+              final pesoTotale = esameProv.getPercentualeTotale(widget.corsoId);
+              final corso = corsoProv.getCorsoById(widget.corsoId);
+              if (corso != null && corso.stato == 'superato' && pesoTotale < 100) {
+                await corsoProv.updateCorso(
+                  corso.copyWith(
+                    stato: 'in_corso',
+                    lode: false,
+                  ),
+                );
+              }
+              navigator.pop();
             },
             child: Text('Elimina',
                 style: TextStyle(color: Theme.of(context).colorScheme.error)),

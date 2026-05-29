@@ -157,7 +157,10 @@ class _EsamiScreenState extends State<EsamiScreen> {
                   itemBuilder: (context, index) {
                     final corso = corsi[index];
                     final esameProv = context.read<EsameProvider>();
-                    final votoCalc = esameProv.calcolaVotoCorso(corso.id);
+                    final pesoTotale = esameProv.getPercentualeTotale(corso.id);
+                    final votoCalc = pesoTotale >= 100
+                        ? esameProv.calcolaVotoCorso(corso.id)
+                        : null;
                     return CorsoCard(
                       corso: corso,
                       votoCalcolato: votoCalc,
@@ -223,10 +226,9 @@ class _EsamiScreenState extends State<EsamiScreen> {
               // 1. Elimina obiettivi associati al corso
               obiProv.deleteObiettiviByCorso(corso.id);
 
-              // 2. Per ogni esame del corso, elimina i suoi obiettivi e poi l'esame
+              // 2. Per ogni esame del corso, elimina l'esame
               final esamiCorso = esameProv.getEsamiCorso(corso.id);
               for (final esame in esamiCorso) {
-                obiProv.deleteObiettiviByEsame(esame.id);
                 esameProv.deleteEsame(esame.id);
               }
 
@@ -254,20 +256,25 @@ class _FilterBottomSheet extends StatefulWidget {
 }
 
 class _FilterBottomSheetState extends State<_FilterBottomSheet> {
-  late String? _stato;
-  late int? _semestre;
-  late String? _tipoLaurea;
-  late int? _anno;
+  late List<String> _stato;
+  late List<int> _semestre;
+  late List<String> _tipoLaurea;
+  late List<int> _anno;
   late RangeValues _cfuRange;
   late bool _cfuFilterActive;
+  bool _isSortMode = false;
+  late String _sortBy;
+  late bool _sortAscending;
 
   @override
   void initState() {
     super.initState();
-    _stato = widget.provider.filtroStato;
-    _semestre = widget.provider.filtroSemestre;
-    _tipoLaurea = widget.provider.filtroTipoLaurea;
-    _anno = widget.provider.filtroAnno;
+    _stato = List.from(widget.provider.filtroStato);
+    _semestre = List.from(widget.provider.filtroSemestre);
+    _tipoLaurea = List.from(widget.provider.filtroTipoLaurea);
+    _anno = List.from(widget.provider.filtroAnno);
+    _sortBy = widget.provider.sortBy;
+    _sortAscending = widget.provider.sortAscending;
     final cfuMin = widget.provider.filtroCfuMin;
     final cfuMax = widget.provider.filtroCfuMax;
     _cfuFilterActive = cfuMin != null || cfuMax != null;
@@ -275,6 +282,14 @@ class _FilterBottomSheetState extends State<_FilterBottomSheet> {
       (cfuMin ?? 1).toDouble(),
       (cfuMax ?? 30).toDouble(),
     );
+  }
+
+  void _syncAnniFiltro() {
+    if (_tipoLaurea.isNotEmpty && _anno.isNotEmpty) {
+      final allAnniValidi =
+          _tipoLaurea.expand((tl) => Corso.anniPerTipo(tl)).toSet();
+      _anno.removeWhere((a) => !allAnniValidi.contains(a));
+    }
   }
 
   @override
@@ -295,19 +310,42 @@ class _FilterBottomSheetState extends State<_FilterBottomSheet> {
           // Header
           Row(
             children: [
-              Text('Filtra Corsi',
-                  style: theme.textTheme.titleLarge
-                      ?.copyWith(fontWeight: FontWeight.w600)),
+              GestureDetector(
+                onTap: () => setState(() => _isSortMode = !_isSortMode),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      _isSortMode ? 'Ordina' : 'Filtra',
+                      style: theme.textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: theme.colorScheme.primary,
+                      ),
+                    ),
+                    Text(
+                      ' Corsi',
+                      style: theme.textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
               const Spacer(),
               TextButton(
                 onPressed: () {
                   setState(() {
-                    _stato = null;
-                    _semestre = null;
-                    _tipoLaurea = null;
-                    _anno = null;
-                    _cfuFilterActive = false;
-                    _cfuRange = const RangeValues(1, 30);
+                    if (_isSortMode) {
+                      _sortBy = 'default';
+                      _sortAscending = true;
+                    } else {
+                      _stato = [];
+                      _semestre = [];
+                      _tipoLaurea = [];
+                      _anno = [];
+                      _cfuFilterActive = false;
+                      _cfuRange = const RangeValues(1, 30);
+                    }
                   });
                 },
                 child: const Text('Resetta'),
@@ -316,160 +354,241 @@ class _FilterBottomSheetState extends State<_FilterBottomSheet> {
           ),
           const SizedBox(height: 16),
 
-          // Stato
-          Text('Stato',
-              style: theme.textTheme.labelLarge
-                  ?.copyWith(fontWeight: FontWeight.w500)),
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 8,
-            runSpacing: 4,
-            children: [
-              _buildFilterChip(
-                label: 'Tutti',
-                selected: _stato == null,
-                onSelected: () => setState(() => _stato = null),
-              ),
-              ...Corso.statiDisponibili.map(
-                (stato) => _buildFilterChip(
-                  label: Corso.statoLabel(stato),
-                  selected: _stato == stato,
-                  onSelected: () => setState(() => _stato = stato),
+          if (_isSortMode) ...[
+            Text('Ordina per',
+                style: theme.textTheme.labelLarge
+                    ?.copyWith(fontWeight: FontWeight.w500)),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              
+              runSpacing: 4,
+              children: [
+                _buildFilterChip(
+                  label: 'Titolo',
+                  selected: _sortBy == 'titolo',
+                  onSelected: () => setState(() =>
+                      _sortBy = _sortBy == 'titolo' ? 'default' : 'titolo'),
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-
-          // Semestre
-          Text('Semestre',
-              style: theme.textTheme.labelLarge
-                  ?.copyWith(fontWeight: FontWeight.w500)),
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 8,
-            children: [
-              _buildFilterChip(
-                label: 'Tutti',
-                selected: _semestre == null,
-                onSelected: () => setState(() => _semestre = null),
-              ),
-              _buildFilterChip(
-                label: '1° Semestre',
-                selected: _semestre == 1,
-                onSelected: () => setState(() => _semestre = 1),
-              ),
-              _buildFilterChip(
-                label: '2° Semestre',
-                selected: _semestre == 2,
-                onSelected: () => setState(() => _semestre = 2),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-
-          // Tipo Laurea
-          Text('Tipo Laurea',
-              style: theme.textTheme.labelLarge
-                  ?.copyWith(fontWeight: FontWeight.w500)),
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 8,
-            runSpacing: 4,
-            children: [
-              _buildFilterChip(
-                label: 'Tutti',
-                selected: _tipoLaurea == null,
-                onSelected: () => setState(() {
-                  _tipoLaurea = null;
-                  _anno = null;
-                }),
-              ),
-              _buildFilterChip(
-                label: 'Triennale',
-                selected: _tipoLaurea == 'triennale',
-                onSelected: () => setState(() {
-                  _tipoLaurea = 'triennale';
-                  if (_anno != null && _anno! > 3) _anno = null;
-                }),
-              ),
-              _buildFilterChip(
-                label: 'Magistrale',
-                selected: _tipoLaurea == 'magistrale',
-                onSelected: () => setState(() {
-                  _tipoLaurea = 'magistrale';
-                  if (_anno != null && _anno! > 2) _anno = null;
-                }),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-
-          // Anno
-          Text('Anno',
-              style: theme.textTheme.labelLarge
-                  ?.copyWith(fontWeight: FontWeight.w500)),
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 8,
-            children: [
-              _buildFilterChip(
-                label: 'Tutti',
-                selected: _anno == null,
-                onSelected: () => setState(() => _anno = null),
-              ),
-              if (_tipoLaurea != null)
-                ...Corso.anniPerTipo(_tipoLaurea!).map(
-                  (a) => _buildFilterChip(
-                    label: '$a° Anno',
-                    selected: _anno == a,
-                    onSelected: () => setState(() => _anno = a),
-                  ),
-                )
-              else
-                ...[1, 2, 3].map(
-                  (a) => _buildFilterChip(
-                    label: '$a° Anno',
-                    selected: _anno == a,
-                    onSelected: () => setState(() => _anno = a),
-                  ),
+                _buildFilterChip(
+                  label: 'Anno e Semestre',
+                  selected: _sortBy == 'anno_semestre',
+                  onSelected: () => setState(() => _sortBy =
+                      _sortBy == 'anno_semestre' ? 'default' : 'anno_semestre'),
                 ),
-            ],
-          ),
-          const SizedBox(height: 16),
-
-          // CFU
-          Row(
-            children: [
-              Text('CFU',
-                  style: theme.textTheme.labelLarge
-                      ?.copyWith(fontWeight: FontWeight.w500)),
-              const SizedBox(width: 8),
-              Switch(
-                value: _cfuFilterActive,
-                onChanged: (v) => setState(() => _cfuFilterActive = v),
-              ),
-              if (_cfuFilterActive)
-                Text(
-                  '${_cfuRange.start.round()} – ${_cfuRange.end.round()}',
-                  style: theme.textTheme.bodyMedium,
+                _buildFilterChip(
+                  label: 'Stato',
+                  selected: _sortBy == 'stato',
+                  onSelected: () => setState(() =>
+                      _sortBy = _sortBy == 'stato' ? 'default' : 'stato'),
                 ),
-            ],
-          ),
-          if (_cfuFilterActive)
-            RangeSlider(
-              values: _cfuRange,
-              min: 1,
-              max: 30,
-              divisions: 29,
-              labels: RangeLabels(
-                '${_cfuRange.start.round()}',
-                '${_cfuRange.end.round()}',
-              ),
-              onChanged: (values) =>
-                  setState(() => _cfuRange = values),
+              ],
             ),
-          const SizedBox(height: 24),
+            const SizedBox(height: 24),
+            Text('Direzione',
+                style: theme.textTheme.labelLarge
+                    ?.copyWith(fontWeight: FontWeight.w500)),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: SegmentedButton<bool>(
+                    segments: const [
+                      ButtonSegment<bool>(
+                        value: true,
+                        label: Text('Crescente'),
+                        icon: Icon(Icons.arrow_upward, size: 18),
+                      ),
+                      ButtonSegment<bool>(
+                        value: false,
+                        label: Text('Decrescente'),
+                        icon: Icon(Icons.arrow_downward, size: 18),
+                      ),
+                    ],
+                    selected: {_sortAscending},
+                    onSelectionChanged: (set) {
+                      setState(() {
+                        _sortAscending = set.first;
+                      });
+                    },
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+          ] else ...[
+            // Stato
+            Text('Stato',
+                style: theme.textTheme.labelLarge
+                    ?.copyWith(fontWeight: FontWeight.w500)),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 4,
+              children: [
+                ...Corso.statiDisponibili.map(
+                  (stato) => _buildFilterChip(
+                    label: Corso.statoLabel(stato),
+                    selected: _stato.contains(stato),
+                    onSelected: () => setState(() {
+                      if (_stato.contains(stato)) {
+                        _stato.remove(stato);
+                      } else {
+                        _stato.add(stato);
+                      }
+                    }),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+
+            // Semestre
+            Text('Semestre',
+                style: theme.textTheme.labelLarge
+                    ?.copyWith(fontWeight: FontWeight.w500)),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              children: [
+                _buildFilterChip(
+                  label: '1° Semestre',
+                  selected: _semestre.contains(1),
+                  onSelected: () => setState(() {
+                    if (_semestre.contains(1)) {
+                      _semestre.remove(1);
+                    } else {
+                      _semestre.add(1);
+                    }
+                  }),
+                ),
+                _buildFilterChip(
+                  label: '2° Semestre',
+                  selected: _semestre.contains(2),
+                  onSelected: () => setState(() {
+                    if (_semestre.contains(2)) {
+                      _semestre.remove(2);
+                    } else {
+                      _semestre.add(2);
+                    }
+                  }),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+
+            // Tipo Laurea
+            Text('Tipo Laurea',
+                style: theme.textTheme.labelLarge
+                    ?.copyWith(fontWeight: FontWeight.w500)),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 4,
+              children: [
+                _buildFilterChip(
+                  label: 'Triennale',
+                  selected: _tipoLaurea.contains('triennale'),
+                  onSelected: () => setState(() {
+                    if (_tipoLaurea.contains('triennale')) {
+                      _tipoLaurea.remove('triennale');
+                    } else {
+                      _tipoLaurea.add('triennale');
+                    }
+                    _syncAnniFiltro();
+                  }),
+                ),
+                _buildFilterChip(
+                  label: 'Magistrale',
+                  selected: _tipoLaurea.contains('magistrale'),
+                  onSelected: () => setState(() {
+                    if (_tipoLaurea.contains('magistrale')) {
+                      _tipoLaurea.remove('magistrale');
+                    } else {
+                      _tipoLaurea.add('magistrale');
+                    }
+                    _syncAnniFiltro();
+                  }),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+
+            // Anno
+            Text('Anno',
+                style: theme.textTheme.labelLarge
+                    ?.copyWith(fontWeight: FontWeight.w500)),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              children: [
+                if (_tipoLaurea.isNotEmpty)
+                  ..._tipoLaurea
+                      .expand((tl) => Corso.anniPerTipo(tl))
+                      .toSet()
+                      .map(
+                        (a) => _buildFilterChip(
+                          label: '$a° Anno',
+                          selected: _anno.contains(a),
+                          onSelected: () => setState(() {
+                            if (_anno.contains(a)) {
+                              _anno.remove(a);
+                            } else {
+                              _anno.add(a);
+                            }
+                          }),
+                        ),
+                      )
+                else
+                  ...[1, 2, 3].map(
+                    (a) => _buildFilterChip(
+                      label: '$a° Anno',
+                      selected: _anno.contains(a),
+                      onSelected: () => setState(() {
+                        if (_anno.contains(a)) {
+                          _anno.remove(a);
+                        } else {
+                          _anno.add(a);
+                        }
+                      }),
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 16),
+
+            // CFU
+            Row(
+              children: [
+                Text('CFU',
+                    style: theme.textTheme.labelLarge
+                        ?.copyWith(fontWeight: FontWeight.w500)),
+                const SizedBox(width: 8),
+                Switch(
+                  value: _cfuFilterActive,
+                  onChanged: (v) => setState(() => _cfuFilterActive = v),
+                ),
+                if (_cfuFilterActive)
+                  Text(
+                    '${_cfuRange.start.round()} – ${_cfuRange.end.round()}',
+                    style: theme.textTheme.bodyMedium,
+                  ),
+              ],
+            ),
+            if (_cfuFilterActive)
+              RangeSlider(
+                values: _cfuRange,
+                min: 1,
+                max: 30,
+                divisions: 29,
+                labels: RangeLabels(
+                  '${_cfuRange.start.round()}',
+                  '${_cfuRange.end.round()}',
+                ),
+                onChanged: (values) => setState(() => _cfuRange = values),
+              ),
+            const SizedBox(height: 24),
+          ],
 
           // Pulsante applica
           SizedBox(
@@ -519,6 +638,7 @@ class _FilterBottomSheetState extends State<_FilterBottomSheet> {
     } else {
       provider.setFiltroCfu(min: null, max: null);
     }
+    provider.setOrdinamento(_sortBy, _sortAscending);
     Navigator.pop(context);
   }
 }
