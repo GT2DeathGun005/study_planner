@@ -6,7 +6,7 @@ import '../../providers/corso_provider.dart';
 import '../../providers/esame_provider.dart';
 import '../../providers/obiettivo_provider.dart';
 import '../obiettivi/obiettivo_detail_screen.dart';
-import '../obiettivi/obiettivo_form_screen.dart';
+import '../esami/esame_form_screen.dart';
 import 'package:material_symbols_icons/symbols.dart';
 
 /// Schermata Calendario (Feature Avanzata 1).
@@ -52,6 +52,9 @@ class _CalendarioScreenState extends State<CalendarioScreen> {
               ? ''
               : (monthStr[0].toUpperCase() + monthStr.substring(1));
           final formattedDate = '$dayStr $capitalizedMonth $yearStr';
+
+          final df = DateFormat('dd MMM', 'it_IT');
+          final scadenze = esameProv.scadenzeImminenti;
 
           return Column(
             children: [
@@ -100,8 +103,41 @@ class _CalendarioScreenState extends State<CalendarioScreen> {
                       ),
                     );
                   },
+                  markerBuilder: (context, date, events) {
+                    if (events.isEmpty) return const SizedBox.shrink();
+                    final eventList = events.take(3).toList();
+                    return Positioned(
+                      bottom: 4,
+                      left: 0,
+                      right: 0,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: eventList.asMap().entries.map((entry) {
+                          final index = entry.key;
+                          final rainbowColors = [
+                            Colors.purple,
+                            Colors.red,
+                            Colors.green,
+                            Colors.blue,
+                            Colors.amber,
+                          ];
+                          final color = rainbowColors[index % rainbowColors.length];
+                          return Container(
+                            margin: const EdgeInsets.symmetric(horizontal: 1.5),
+                            width: 5,
+                            height: 5,
+                            decoration: BoxDecoration(
+                              color: color,
+                              shape: BoxShape.circle,
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                    );
+                  },
                 ),
                 calendarStyle: CalendarStyle(
+                  cellMargin: const EdgeInsets.all(11.0),
                   todayDecoration: BoxDecoration(
                     color: theme.colorScheme.primary.withValues(alpha: 0.3),
                     shape: BoxShape.circle,
@@ -134,26 +170,28 @@ class _CalendarioScreenState extends State<CalendarioScreen> {
 
               const Divider(height: 1),
 
-              // Header giorno selezionato
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-                child: Row(
-                  children: [
-                    Text(formattedDate,
-                        style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600)),
-                    const Spacer(),
-                    Text('${obiettiviGiorno.length + esamiGiorno.length} elementi',
-                        style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurface.withValues(alpha: 0.5))),
-                  ],
-                ),
-              ),
-
-              // Lista attività del giorno
+              // Lista attività del giorno + Scadenze imminenti in una unica area scrollabile
               Expanded(
-                child: (obiettiviGiorno.isEmpty && esamiGiorno.isEmpty)
-                    ? Center(
+                child: ListView(
+                  padding: const EdgeInsets.only(bottom: 80),
+                  children: [
+                    // Header giorno selezionato
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+                      child: Row(
+                        children: [
+                          Text(formattedDate,
+                              style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600)),
+                          const Spacer(),
+                          Text('${obiettiviGiorno.length + esamiGiorno.length} elementi',
+                              style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurface.withValues(alpha: 0.5))),
+                        ],
+                      ),
+                    ),
+                    if (obiettiviGiorno.isEmpty && esamiGiorno.isEmpty)
+                      Padding(
+                        padding: const EdgeInsets.all(32),
                         child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Icon(Icons.event_available, size: 48, color: theme.colorScheme.onSurface.withValues(alpha: 0.3)),
                             const SizedBox(height: 8),
@@ -162,59 +200,89 @@ class _CalendarioScreenState extends State<CalendarioScreen> {
                           ],
                         ),
                       )
-                    : ListView(
-                        padding: const EdgeInsets.only(bottom: 80),
-                        children: [
-                          // Esami del giorno
-                          ...esamiGiorno.map((esame) {
-                            final corso = corsoProv.getCorsoById(esame.corsoId);
-                            return ListTile(
-                              leading: Container(
-                                padding: const EdgeInsets.all(8),
-                                decoration: BoxDecoration(color: Colors.red.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)),
-                                child: const Icon(Icons.quiz, color: Colors.red, size: 20),
-                              ),
-                              title: Text(esame.titolo),
-                              subtitle: Text(corso?.nome ?? 'Corso non trovato'),
-                              trailing: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                decoration: BoxDecoration(color: Colors.red.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)),
-                                child: Text('Esame', style: theme.textTheme.labelSmall?.copyWith(color: Colors.red)),
-                              ),
-                            );
-                          }),
-                          // Obiettivi del giorno
-                          ...obiettiviGiorno.map((obi) {
-                            final corso = obi.corsoId != null ? corsoProv.getCorsoById(obi.corsoId!) : null;
-                            final isRaggiunto = obi.stato == 'raggiunto';
-                            return ListTile(
-                              leading: Container(
-                                padding: const EdgeInsets.all(8),
-                                decoration: BoxDecoration(
-                                  color: Colors.amber.withValues(alpha: 0.1),
-                                  borderRadius: BorderRadius.circular(8),
+                    else ...[
+                      // Esami del giorno
+                      ...esamiGiorno.map((esame) {
+                        final corso = corsoProv.getCorsoById(esame.corsoId);
+                        return ListTile(
+                          leading: Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(color: Colors.red.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)),
+                            child: const Icon(Icons.quiz, color: Colors.red, size: 20),
+                          ),
+                          title: Text(esame.titolo),
+                          subtitle: Text(corso?.nome ?? 'Corso non trovato'),
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => EsameFormScreen(
+                                  esame: esame,
+                                  corsoId: esame.corsoId,
                                 ),
-                                child: Icon(Symbols.file_map_stack,  color: Colors.amber[700], size: 20,),
                               ),
-                              title: Text(obi.titolo, style: TextStyle(decoration: isRaggiunto ? TextDecoration.lineThrough : null)),
-                              subtitle: Text(corso?.nome ?? (obi.descrizione != '' ? obi.descrizione : 'Nessuna descrizione')),
-                              onTap: () {
-                                Navigator.push(context, MaterialPageRoute(builder: (_) => ObiettivoDetailScreen(obiettivo: obi)));
-                              },
                             );
-                          }),
-                        ],
-                      ),
+                          },
+                        );
+                      }),
+                      // Obiettivi del giorno
+                      ...obiettiviGiorno.map((obi) {
+                        final corso = obi.corsoId != null ? corsoProv.getCorsoById(obi.corsoId!) : null;
+                        final isRaggiunto = obi.stato == 'raggiunto';
+                        return ListTile(
+                          leading: Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: Colors.amber.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Icon(Symbols.file_map_stack,  color: Colors.amber[700], size: 20,),
+                          ),
+                          title: Text(obi.titolo, style: TextStyle(decoration: isRaggiunto ? TextDecoration.lineThrough : null)),
+                          subtitle: Text(corso?.nome ?? (obi.descrizione != '' ? obi.descrizione : 'Nessuna descrizione')),
+                          onTap: () {
+                            Navigator.push(context, MaterialPageRoute(builder: (_) => ObiettivoDetailScreen(obiettivo: obi)));
+                          },
+                        );
+                      }),
+                    ],
+
+                    // Scadenze imminenti
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 24, 16, 8),
+                      child: Text('Scadenze Imminenti', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600)),
+                    ),
+                    if (scadenze.isEmpty)
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 24, 16, 8),
+                        child: Text('Nessuna scadenza nei prossimi 7 giorni',
+                            style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurface.withValues(alpha: 0.5)),
+                            textAlign: TextAlign.center),
+                      )
+                    else
+                      ...scadenze.map((esame) {
+                        final corso = corsoProv.getCorsoById(esame.corsoId);
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                          child: Card(
+                            elevation: 0,
+                            margin: EdgeInsets.zero,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: Colors.red.withValues(alpha: 0.2))),
+                            child: ListTile(
+                              leading: const Icon(Icons.alarm, color: Colors.red),
+                              title: Text(esame.titolo),
+                              subtitle: Text(corso?.nome ?? ''),
+                              trailing: Text(df.format(esame.data), style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600, color: Colors.red)),
+                            ),
+                          ),
+                        );
+                      }),
+                  ],
+                ),
               ),
             ],
           );
         },
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          Navigator.push(context, MaterialPageRoute(builder: (_) => ObiettivoFormScreen(dataPianificata: _selectedDay)));
-        },
-        child: const Icon(Icons.add),
       ),
     );
   }

@@ -38,6 +38,30 @@ class _EsameFormScreenState extends State<EsameFormScreen> {
   bool get isReadOnly =>
       isEditing && widget.esame!.stato == 'completato';
 
+  Color _prioritaColor(String priorita) {
+    switch (priorita) {
+      case 'alta':
+        return Colors.red;
+      case 'media':
+        return Colors.orange;
+      case 'bassa':
+        return Colors.green;
+      default:
+        return Colors.grey;
+    }
+  }
+
+  Color _statoColor(String stato) {
+    switch (stato) {
+      case 'programmato':
+        return Colors.blue;
+      case 'completato':
+        return Colors.green;
+      default:
+        return Colors.grey;
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -133,11 +157,13 @@ class _EsameFormScreenState extends State<EsameFormScreen> {
                 _DetailRow(
                     icon: Icons.priority_high,
                     label: 'Priorità',
-                    value: Esame.prioritaLabel(esame.priorita)),
+                    value: Esame.prioritaLabel(esame.priorita),
+                    valueColor: _prioritaColor(esame.priorita)),
                 _DetailRow(
                     icon: Icons.traffic,
                     label: 'Stato',
-                    value: Esame.statoLabel(esame.stato)),
+                    value: Esame.statoLabel(esame.stato),
+                    valueColor: _statoColor(esame.stato)),
                 _DetailRow(
                     icon: Icons.percent,
                     label: 'Peso',
@@ -472,7 +498,7 @@ class _EsameFormScreenState extends State<EsameFormScreen> {
               barrierDismissible: false,
               builder: (context) {
                 return AlertDialog(
-                  title: const Text('Corso Completato! 🎉'),
+                  title: const Text('Congratulazioni! 🎉'),
                   content: const Text(
                     'Il voto complessivo calcolato è 30. Questo corso è stato superato con lode?'
                   ),
@@ -509,11 +535,13 @@ class _DetailRow extends StatelessWidget {
   final IconData icon;
   final String label;
   final String value;
+  final Color? valueColor;
 
   const _DetailRow({
     required this.icon,
     required this.label,
     required this.value,
+    this.valueColor,
   });
 
   @override
@@ -535,6 +563,7 @@ class _DetailRow extends StatelessWidget {
           Text(value,
               style: theme.textTheme.bodyMedium?.copyWith(
                 fontWeight: FontWeight.w500,
+                color: valueColor,
               )),
         ],
       ),

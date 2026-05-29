@@ -156,6 +156,23 @@ class _CorsoDetailScreenState extends State<CorsoDetailScreen> {
     );
   }
 
+  Color _statoColor(String stato) {
+    switch (stato) {
+      case 'da_iniziare':
+        return Colors.grey;
+      case 'in_corso':
+        return Colors.blue;
+      case 'terminato':
+        return Colors.orange;
+      case 'da_ripassare':
+        return Colors.amber;
+      case 'superato':
+        return Colors.green;
+      default:
+        return Colors.grey;
+    }
+  }
+
   Widget _buildInfoSection(BuildContext context, Corso corso, ThemeData theme,
       double votoCalcolato, double pesoTotale) {
     return Card(
@@ -193,7 +210,8 @@ class _CorsoDetailScreenState extends State<CorsoDetailScreen> {
             _DetailRow(
                 icon: Icons.traffic,
                 label: 'Stato',
-                value: Corso.statoLabel(corso.stato)),
+                value: Corso.statoLabel(corso.stato),
+                valueColor: _statoColor(corso.stato)),
             if (corso.votoPrevisto != null)
               _DetailRow(
                   icon: Icons.trending_up,
@@ -280,11 +298,13 @@ class _DetailRow extends StatelessWidget {
   final IconData icon;
   final String label;
   final String value;
+  final Color? valueColor;
 
   const _DetailRow({
     required this.icon,
     required this.label,
     required this.value,
+    this.valueColor,
   });
 
   @override
@@ -306,6 +326,7 @@ class _DetailRow extends StatelessWidget {
           Text(value,
               style: theme.textTheme.bodyMedium?.copyWith(
                 fontWeight: FontWeight.w500,
+                color: valueColor,
               )),
         ],
       ),

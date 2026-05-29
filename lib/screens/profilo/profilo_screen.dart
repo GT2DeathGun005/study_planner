@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import 'package:fl_chart/fl_chart.dart';
+import '../../models/corso.dart';
 import '../../models/obiettivo.dart';
 import '../../providers/attivita_provider.dart';
 import '../../providers/corso_provider.dart';
@@ -32,10 +33,291 @@ class _ProfiloScreenState extends State<ProfiloScreen> {
     });
   }
 
+  int _arrotondaVoto(double voto) {
+    final roundedDec = double.parse(voto.toStringAsFixed(2));
+    final intero = roundedDec.floor();
+    final decimale = roundedDec - intero;
+    return decimale > 0.5 ? (intero + 1) : intero;
+  }
+
+  String _generaAcronimo(String nome) {
+    if (nome.trim().isEmpty) return '';
+    final parole = nome.trim().split(RegExp(r'\s+'));
+    return parole.map((p) => p.isNotEmpty ? p[0].toUpperCase() : '').join('');
+  }
+
+  double _calcolaMediaPonderata(List<Corso> corsi, EsameProvider esameProv) {
+    final corsiSuperati = corsi.where((c) => c.stato == 'superato').toList();
+    if (corsiSuperati.isEmpty) return 0.0;
+
+    double sommaProdotti = 0.0;
+    int sommaCfu = 0;
+
+    for (final corso in corsiSuperati) {
+      final votoCalcolato = esameProv.calcolaVotoCorso(corso.id);
+      if (votoCalcolato <= 0) continue;
+
+      int votoCorso = _arrotondaVoto(votoCalcolato);
+      if (corso.lode) {
+        votoCorso = 31;
+      }
+
+      sommaProdotti += votoCorso * corso.cfu;
+      sommaCfu += corso.cfu;
+    }
+
+    if (sommaCfu == 0) return 0.0;
+    return sommaProdotti / sommaCfu;
+  }
+
+  DateTime _getCompletionDate(Corso corso, EsameProvider esameProv) {
+    final esamiCorso = esameProv.getEsamiCorso(corso.id)
+        .where((e) => e.stato == 'completato')
+        .toList();
+    if (esamiCorso.isEmpty) return corso.createdAt;
+    return esamiCorso.map((e) => e.data).reduce((a, b) => a.isAfter(b) ? a : b);
+  }
+
+  List<Map<String, dynamic>> _preparaDatiGrafico(List<Corso> corsi, EsameProvider esameProv) {
+    final corsiSuperati = corsi.where((c) => c.stato == 'superato').toList();
+    if (corsiSuperati.isEmpty) return [];
+
+    final list = corsiSuperati.map((corso) {
+      final dataCompletamento = _getCompletionDate(corso, esameProv);
+      final votoCalcolato = esameProv.calcolaVotoCorso(corso.id);
+      int votoCorso = _arrotondaVoto(votoCalcolato);
+      if (corso.lode) {
+        votoCorso = 31;
+      }
+      return {
+        'corso': corso,
+        'data': dataCompletamento,
+        'voto': votoCorso,
+      };
+    }).toList();
+
+    list.sort((a, b) => (a['data'] as DateTime).compareTo(b['data'] as DateTime));
+
+    final List<Map<String, dynamic>> result = [];
+    double sommaProdotti = 0.0;
+    int sommaCfu = 0;
+
+    for (int i = 0; i < list.length; i++) {
+      final item = list[i];
+      final c = item['corso'] as Corso;
+      final voto = item['voto'] as int;
+
+      sommaProdotti += voto * c.cfu;
+      sommaCfu += c.cfu;
+      final media = sommaProdotti / sommaCfu;
+
+      result.add({
+        'index': (i + 1).toDouble(),
+        'corsoNome': c.nome,
+        'votoCorso': voto,
+        'cfu': c.cfu,
+        'lode': c.lode,
+        'media': media,
+      });
+    }
+
+    return result;
+  }
+
+  Widget _buildAndamentoChart(BuildContext context, ThemeData theme, List<Map<String, dynamic>> dataPoints) {
+    if (dataPoints.isEmpty) {
+      return Container(
+        margin: const EdgeInsets.symmetric(horizontal: 4),
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.2),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: theme.colorScheme.outline.withValues(alpha: 0.15)),
+        ),
+        child: Column(
+          children: [
+            Icon(Icons.show_chart, size: 40, color: theme.colorScheme.onSurface.withValues(alpha: 0.3)),
+            const SizedBox(height: 12),
+            Text(
+              "Nessun esame completato per tracciare l'andamento",
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      );
+    }
+
+    final double minY = 18.0;
+    final double maxY = 31.0;
+
+    final spots = dataPoints.map((dp) {
+      return FlSpot(dp['index'] as double, dp['media'] as double);
+    }).toList();
+
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 4),
+      padding: const EdgeInsets.fromLTRB(12, 24, 24, 16),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: theme.colorScheme.outline.withValues(alpha: 0.1)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            height: 200,
+            child: LineChart(
+              LineChartData(
+                minX: 1.0,
+                maxX: dataPoints.length == 1 ? 2.0 : dataPoints.length.toDouble(),
+                minY: minY,
+                maxY: maxY,
+                gridData: FlGridData(
+                  show: true,
+                  drawVerticalLine: false,
+                  getDrawingHorizontalLine: (value) => FlLine(
+                    color: theme.colorScheme.outline.withValues(alpha: 0.1),
+                    strokeWidth: 1,
+                  ),
+                ),
+                titlesData: FlTitlesData(
+                  show: true,
+                  topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                  rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                  bottomTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      reservedSize: 30,
+                      interval: 1,
+                      getTitlesWidget: (value, meta) {
+                        final idx = value.toInt() - 1;
+                        if (idx >= 0 && idx < dataPoints.length) {
+                          if (dataPoints.length > 6 && (idx % (dataPoints.length / 5).ceil() != 0) && idx != dataPoints.length - 1) {
+                            return const SizedBox.shrink();
+                          }
+                          final cNome = dataPoints[idx]['corsoNome'] as String;
+                          final label = _generaAcronimo(cNome);
+                          return Padding(
+                            padding: const EdgeInsets.only(top: 8.0),
+                            child: Text(
+                              label,
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                fontSize: 9,
+                                color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                              ),
+                            ),
+                          );
+                        }
+                        return const SizedBox.shrink();
+                      },
+                    ),
+                  ),
+                  leftTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      reservedSize: 30,
+                      interval: 2,
+                      getTitlesWidget: (value, meta) {
+                        if (value >= 18 && value <= 30) {
+                          return Text(
+                            value.toInt().toString(),
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              fontSize: 10,
+                              color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                            ),
+                          );
+                        }
+                        return const SizedBox.shrink();
+                      },
+                    ),
+                  ),
+                ),
+                borderData: FlBorderData(show: false),
+                lineTouchData: LineTouchData(
+                  touchTooltipData: LineTouchTooltipData(
+                    getTooltipColor: (touchedSpot) => theme.colorScheme.surfaceContainerHigh,
+                    getTooltipItems: (touchedSpots) {
+                      return touchedSpots.map((spot) {
+                        final data = dataPoints[spot.x.toInt() - 1];
+                        final cNome = data['corsoNome'] as String;
+                        final voto = data['votoCorso'] as int;
+                        final cfu = data['cfu'] as int;
+                        final lode = data['lode'] as bool;
+                        final media = data['media'] as double;
+                        final votoStr = lode ? '30L' : (voto == 31 ? '30L' : '$voto');
+                        return LineTooltipItem(
+                          '$cNome\nEsame: $votoStr ($cfu CFU)\nMedia: ${media.toStringAsFixed(2)}',
+                          theme.textTheme.bodySmall!.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: theme.colorScheme.onSurface,
+                          ),
+                        );
+                      }).toList();
+                    },
+                  ),
+                ),
+                lineBarsData: [
+                  LineChartBarData(
+                    spots: spots,
+                    isCurved: true,
+                    curveSmoothness: 0.3,
+                    gradient: const LinearGradient(
+                      colors: [
+                        Colors.red,
+                        Colors.orange,
+                        Colors.amber,
+                        Colors.green,
+                        Colors.blue,
+                        Colors.indigo,
+                        Colors.purple,
+                      ],
+                    ),
+                    barWidth: 5,
+                    isStrokeCapRound: true,
+                    dotData: FlDotData(
+                      show: true,
+                      getDotPainter: (spot, percent, barData, index) {
+                        return FlDotCirclePainter(
+                          radius: 5.5,
+                          color: Colors.white,
+                          strokeWidth: 3,
+                          strokeColor: theme.colorScheme.primary,
+                        );
+                      },
+                    ),
+                    belowBarData: BarAreaData(
+                      show: true,
+                      gradient: LinearGradient(
+                        colors: [
+                          Colors.red.withValues(alpha: 0.35),
+                          Colors.orange.withValues(alpha: 0.35),
+                          Colors.amber.withValues(alpha: 0.35),
+                          Colors.green.withValues(alpha: 0.35),
+                          Colors.blue.withValues(alpha: 0.35),
+                          Colors.indigo.withValues(alpha: 0.35),
+                          Colors.purple.withValues(alpha: 0.35),
+                        ],
+                        begin: Alignment.centerLeft,
+                        end: Alignment.centerRight,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final df = DateFormat('dd MMM', 'it_IT');
 
     return Scaffold(
       appBar: AppBar(title: const Text('Profilo e Statistiche'), centerTitle: false),
@@ -46,21 +328,20 @@ class _ProfiloScreenState extends State<ProfiloScreen> {
           final totEsami = esameProv.esami.length;
           final obiRaggiunti = obiProv.raggiunti;
           final totObiettivi = obiProv.tuttiObiettivi.length;
-          final scadenze = esameProv.scadenzeImminenti;
 
-          // Calcola medie separate per Triennale e Magistrale
+          // Calcola medie separate per Triennale e Magistrale (media ponderata dei voti dei corsi)
           final corsiTriennale = corsoProv.tuttiCorsi
               .where((c) => c.tipoLaurea == 'triennale')
               .toList();
           final corsiMagistrale = corsoProv.tuttiCorsi
               .where((c) => c.tipoLaurea == 'magistrale')
               .toList();
-          final idsTriennale = corsiTriennale.map((c) => c.id).toList();
-          final idsMagistrale = corsiMagistrale.map((c) => c.id).toList();
-          final mediaTriennale =
-              esameProv.mediaVotiPerTipoLaurea('triennale', idsTriennale);
-          final mediaMagistrale =
-              esameProv.mediaVotiPerTipoLaurea('magistrale', idsMagistrale);
+
+          final mediaTriennale = _calcolaMediaPonderata(corsiTriennale, esameProv);
+          final mediaMagistrale = _calcolaMediaPonderata(corsiMagistrale, esameProv);
+
+          final corsiSelezionati = _selectedLaurea == 'triennale' ? corsiTriennale : corsiMagistrale;
+          final dataPoints = _preparaDatiGrafico(corsiSelezionati, esameProv);
 
           return ListView(
             padding: const EdgeInsets.all(16),
@@ -288,31 +569,10 @@ class _ProfiloScreenState extends State<ProfiloScreen> {
               ),
               const SizedBox(height: 24),
 
-              // Scadenze imminenti
-              Text('Scadenze Imminenti', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600)),
+              // Grafico dell'Andamento
+              Text("Grafico dell'Andamento", style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600)),
               const SizedBox(height: 8),
-              if (scadenze.isEmpty)
-                Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Text('Nessuna scadenza nei prossimi 7 giorni 🎉',
-                      style: theme.textTheme.bodyMedium?.copyWith(color: theme.colorScheme.onSurface.withValues(alpha: 0.5)),
-                      textAlign: TextAlign.center),
-                )
-              else
-                ...scadenze.map((esame) {
-                  final corso = corsoProv.getCorsoById(esame.corsoId);
-                  return Card(
-                    elevation: 0,
-                    margin: const EdgeInsets.only(bottom: 8),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: Colors.red.withValues(alpha: 0.2))),
-                    child: ListTile(
-                      leading: const Icon(Icons.alarm, color: Colors.red),
-                      title: Text(esame.titolo),
-                      subtitle: Text(corso?.nome ?? ''),
-                      trailing: Text(df.format(esame.data), style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600, color: Colors.red)),
-                    ),
-                  );
-                }),
+              _buildAndamentoChart(context, theme, dataPoints),
               const SizedBox(height: 32),
             ],
           );
