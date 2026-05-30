@@ -99,7 +99,6 @@ class _EsamiScreenState extends State<EsamiScreen> {
                         onPressed: () =>
                             _showFilterBottomSheet(context, provider),
                         icon: const Icon(Icons.filter_list),
-                        tooltip: 'Filtra corsi',
                       ),
                     );
                   },

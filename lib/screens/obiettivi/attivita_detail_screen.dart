@@ -62,7 +62,6 @@ class _AttivitaDetailScreenState extends State<AttivitaDetailScreen> {
             actions: [
               IconButton(
                 icon: const Icon(Icons.edit_outlined),
-                tooltip: 'Modifica attività',
                 onPressed: () async {
                   final attivitaProvider = context.read<AttivitaProvider>();
                   final obiettivoProvider = context.read<ObiettivoProvider>();

@@ -144,7 +144,6 @@ class AttivitaCard extends StatelessWidget {
                     minWidth: 32,
                     minHeight: 32,
                   ),
-                  tooltip: 'Avvia Pomodoro',
                   color: theme.colorScheme.primary,
                 ),
               ],

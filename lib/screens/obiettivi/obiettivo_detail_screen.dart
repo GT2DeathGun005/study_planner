@@ -85,7 +85,6 @@ class _ObiettivoDetailScreenState extends State<ObiettivoDetailScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.edit_outlined),
-            tooltip: 'Modifica obiettivo',
             onPressed: () async {
               // Ricarica dal DB per avere stato aggiornato
               final obiettivoProvider = context.read<ObiettivoProvider>();
@@ -316,7 +315,7 @@ class _ObiettivoDetailScreenState extends State<ObiettivoDetailScreen> {
                 final pomTot = attProv.pomodoroTotali;
                 return _DetailRow(
                   icon: Icons.timer,
-                  label: 'Pomodori',
+                  label: 'Pomodori previsti',
                   value: pomTot > 0 ? '$pomComp/$pomTot' : '0',
                   valueColor: Colors.deepOrange,
                 );

@@ -100,7 +100,6 @@ class _ObiettiviScreenState extends State<ObiettiviScreen> {
                         onPressed: () =>
                             _showFilterBottomSheet(context, provider),
                         icon: const Icon(Icons.filter_list),
-                        tooltip: 'Filtra obiettivi',
                       ),
                     );
                   },
