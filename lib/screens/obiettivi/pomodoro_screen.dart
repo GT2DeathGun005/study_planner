@@ -138,6 +138,7 @@ class _PomodoroScreenState extends State<PomodoroScreen> {
           );
       // Passa alla pausa
       setState(() {
+        _isRunning = false;
         _isBreak = true;
         _totalSeconds = _tipoPomodoro.breakMinutes * 60;
         _remainingSeconds = _totalSeconds;
@@ -146,6 +147,7 @@ class _PomodoroScreenState extends State<PomodoroScreen> {
     } else {
       // Fine pausa, torna al lavoro
       setState(() {
+        _isRunning = false;
         _isBreak = false;
         _totalSeconds = _tipoPomodoro.workMinutes * 60;
         _remainingSeconds = _totalSeconds;
@@ -319,7 +321,7 @@ class _PomodoroScreenState extends State<PomodoroScreen> {
                       Text('$_sessionsCompleted',
                           style: theme.textTheme.headlineSmall
                               ?.copyWith(fontWeight: FontWeight.bold)),
-                      Text('Sessioni',
+                      Text('Pomodori',
                           style: theme.textTheme.bodySmall),
                     ]),
                     Container(

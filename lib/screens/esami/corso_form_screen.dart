@@ -219,9 +219,11 @@ class _CorsoFormScreenState extends State<CorsoFormScreen> {
                     child: Text(Corso.statoLabel(stato)),
                   );
                 }).toList(),
-                onChanged: (v) {
-                  if (v != null) setState(() => _stato = v);
-                },
+                onChanged: (widget.corso != null && widget.corso!.stato == 'superato')
+                    ? null
+                    : (v) {
+                        if (v != null) setState(() => _stato = v);
+                      },
               ),
               const SizedBox(height: 16),
 

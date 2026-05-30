@@ -108,6 +108,12 @@ class _AttivitaDetailScreenState extends State<AttivitaDetailScreen> {
                         valueColor: _statoColor(attivita.completata),
                       ),
                       _DetailRow(
+                        icon: Icons.schedule,
+                        label: 'Tempo di studio totale',
+                        value: '${attivita.minutiStudio} min',
+                        valueColor: theme.colorScheme.primary,
+                      ),
+                      _DetailRow(
                         icon: Icons.timer_outlined,
                         label: 'Pomodori totali',
                         value:
@@ -129,13 +135,6 @@ class _AttivitaDetailScreenState extends State<AttivitaDetailScreen> {
                         iconWidget: Image.asset('assets/Cuore_di_Bue.png'),
                         label: 'Pomodori Cuore di Bue (100 min)',
                         value: '${attivita.pomodoroCuoreDiBue}',
-                      ),
-                      const Divider(height: 24),
-                      _DetailRow(
-                        icon: Icons.schedule,
-                        label: 'Tempo di studio totale',
-                        value: '${attivita.minutiStudio} min',
-                        valueColor: theme.colorScheme.primary,
                       ),
                       if (attivita.descrizione.isNotEmpty) ...[
                         const Divider(height: 24),
