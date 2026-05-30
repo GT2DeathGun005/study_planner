@@ -31,8 +31,9 @@ class _ObiettivoDetailScreenState extends State<ObiettivoDetailScreen> {
   void initState() {
     super.initState();
     _obiettivo = widget.obiettivo;
+    final attivitaProvider = context.read<AttivitaProvider>();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<AttivitaProvider>().loadAttivita(_obiettivo.id);
+      attivitaProvider.loadAttivita(_obiettivo.id);
     });
   }
 
@@ -73,9 +74,10 @@ class _ObiettivoDetailScreenState extends State<ObiettivoDetailScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final corsoProv = context.watch<CorsoProvider>();
-    final nomeCorso = _obiettivo.corsoId != null
-        ? corsoProv.getCorsoById(_obiettivo.corsoId!)?.nome
-        : null;
+    final nomeCorso =
+        _obiettivo.corsoId != null
+            ? corsoProv.getCorsoById(_obiettivo.corsoId!)?.nome
+            : null;
 
     return Scaffold(
       appBar: AppBar(
@@ -86,35 +88,29 @@ class _ObiettivoDetailScreenState extends State<ObiettivoDetailScreen> {
             tooltip: 'Modifica obiettivo',
             onPressed: () async {
               // Ricarica dal DB per avere stato aggiornato
-              await context
-                  .read<ObiettivoProvider>()
-                  .loadObiettivi();
+              final obiettivoProvider = context.read<ObiettivoProvider>();
+              await obiettivoProvider.loadObiettivi();
               if (!context.mounted) return;
-              final updated = context
-                  .read<ObiettivoProvider>()
-                  .tuttiObiettivi
-                  .where((o) => o.id == _obiettivo.id)
-                  .firstOrNull;
+              final updated =
+                  obiettivoProvider.tuttiObiettivi
+                      .where((o) => o.id == _obiettivo.id)
+                      .firstOrNull;
               if (updated == null) return;
               await Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (_) =>
-                      ObiettivoFormScreen(obiettivo: updated),
+                  builder: (_) => ObiettivoFormScreen(obiettivo: updated),
                 ),
               );
-              if (context.mounted) {
-                await context
-                    .read<ObiettivoProvider>()
-                    .loadObiettivi();
-                final refreshed = context
-                    .read<ObiettivoProvider>()
-                    .tuttiObiettivi
-                    .where((o) => o.id == _obiettivo.id)
-                    .firstOrNull;
-                if (refreshed != null) {
-                  setState(() => _obiettivo = refreshed);
-                }
+              if (!context.mounted) return;
+              await obiettivoProvider.loadObiettivi();
+              if (!context.mounted) return;
+              final refreshed =
+                  obiettivoProvider.tuttiObiettivi
+                      .where((o) => o.id == _obiettivo.id)
+                      .firstOrNull;
+              if (refreshed != null) {
+                setState(() => _obiettivo = refreshed);
               }
             },
           ),
@@ -139,16 +135,16 @@ class _ObiettivoDetailScreenState extends State<ObiettivoDetailScreen> {
                 const Spacer(),
                 Consumer<AttivitaProvider>(
                   builder: (context, attProv, _) {
-                    final completate = attProv.attivita
-                        .where((a) => a.completata)
-                        .length;
+                    final completate =
+                        attProv.attivita.where((a) => a.completata).length;
                     final totale = attProv.attivita.length;
                     if (totale == 0) return const SizedBox.shrink();
                     return Text(
                       '$completate/$totale',
                       style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.onSurface
-                            .withValues(alpha: 0.5),
+                        color: theme.colorScheme.onSurface.withValues(
+                          alpha: 0.5,
+                        ),
                         fontWeight: FontWeight.w600,
                       ),
                     );
@@ -164,8 +160,7 @@ class _ObiettivoDetailScreenState extends State<ObiettivoDetailScreen> {
             child: Consumer<AttivitaProvider>(
               builder: (context, attivitaProvider, _) {
                 if (attivitaProvider.isLoading) {
-                  return const Center(
-                      child: CircularProgressIndicator());
+                  return const Center(child: CircularProgressIndicator());
                 }
 
                 final attivita = attivitaProvider.attivita;
@@ -175,26 +170,29 @@ class _ObiettivoDetailScreenState extends State<ObiettivoDetailScreen> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.task_outlined,
-                            size: 56,
-                            color: theme.colorScheme.onSurface
-                                .withValues(alpha: 0.3)),
+                        Icon(
+                          Icons.task_outlined,
+                          size: 56,
+                          color: theme.colorScheme.onSurface.withValues(
+                            alpha: 0.3,
+                          ),
+                        ),
                         const SizedBox(height: 12),
                         Text(
                           'Nessuna attività',
-                          style:
-                              theme.textTheme.titleSmall?.copyWith(
-                            color: theme.colorScheme.onSurface
-                                .withValues(alpha: 0.5),
+                          style: theme.textTheme.titleSmall?.copyWith(
+                            color: theme.colorScheme.onSurface.withValues(
+                              alpha: 0.5,
+                            ),
                           ),
                         ),
                         const SizedBox(height: 4),
                         Text(
                           'Aggiungi la prima attività per questo obiettivo',
-                          style:
-                              theme.textTheme.bodySmall?.copyWith(
-                            color: theme.colorScheme.onSurface
-                                .withValues(alpha: 0.4),
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.colorScheme.onSurface.withValues(
+                              alpha: 0.4,
+                            ),
                           ),
                         ),
                       ],
@@ -218,13 +216,11 @@ class _ObiettivoDetailScreenState extends State<ObiettivoDetailScreen> {
                         await Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (_) =>
-                                PomodoroScreen(attivita: att),
+                            builder: (_) => PomodoroScreen(attivita: att),
                           ),
                         );
                         if (context.mounted) {
-                          await attivitaProvider
-                              .loadAttivita(_obiettivo.id);
+                          await attivitaProvider.loadAttivita(_obiettivo.id);
                           await _refreshObiettivo();
                         }
                       },
@@ -232,20 +228,19 @@ class _ObiettivoDetailScreenState extends State<ObiettivoDetailScreen> {
                         await Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (_) => AttivitaDetailScreen(
-                              attivitaId: att.id,
-                              obiettivoId: _obiettivo.id,
-                            ),
+                            builder:
+                                (_) => AttivitaDetailScreen(
+                                  attivitaId: att.id,
+                                  obiettivoId: _obiettivo.id,
+                                ),
                           ),
                         );
                         if (context.mounted) {
-                          await attivitaProvider
-                              .loadAttivita(_obiettivo.id);
+                          await attivitaProvider.loadAttivita(_obiettivo.id);
                           await _refreshObiettivo();
                         }
                       },
-                      onDelete: () =>
-                          _confirmDeleteAttivita(context, att),
+                      onDelete: () => _confirmDeleteAttivita(context, att),
                     );
                   },
                 );
@@ -259,15 +254,11 @@ class _ObiettivoDetailScreenState extends State<ObiettivoDetailScreen> {
           await Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (_) => AttivitaFormScreen(
-                obiettivoId: _obiettivo.id,
-              ),
+              builder: (_) => AttivitaFormScreen(obiettivoId: _obiettivo.id),
             ),
           );
           if (context.mounted) {
-            await context
-                .read<AttivitaProvider>()
-                .loadAttivita(_obiettivo.id);
+            await context.read<AttivitaProvider>().loadAttivita(_obiettivo.id);
             await _refreshObiettivo();
           }
         },
@@ -278,7 +269,10 @@ class _ObiettivoDetailScreenState extends State<ObiettivoDetailScreen> {
   }
 
   Widget _buildInfoSection(
-      BuildContext context, ThemeData theme, String? nomeCorso) {
+    BuildContext context,
+    ThemeData theme,
+    String? nomeCorso,
+  ) {
     return Card(
       margin: const EdgeInsets.all(16),
       elevation: 0,
@@ -308,16 +302,13 @@ class _ObiettivoDetailScreenState extends State<ObiettivoDetailScreen> {
             _DetailRow(
               icon: Icons.event,
               label: 'Data pianificata',
-              value: _obiettivo.dataPianificata != null
-                  ? _getFormattedDate(_obiettivo.dataPianificata!)
-                  : 'Nessuna',
+              value:
+                  _obiettivo.dataPianificata != null
+                      ? _getFormattedDate(_obiettivo.dataPianificata!)
+                      : 'Nessuna',
             ),
             if (nomeCorso != null)
-              _DetailRow(
-                icon: Icons.book,
-                label: 'Corso',
-                value: nomeCorso,
-              ),
+              _DetailRow(icon: Icons.book, label: 'Corso', value: nomeCorso),
             // Pomodoro summary
             Consumer<AttivitaProvider>(
               builder: (context, attProv, _) {
@@ -333,14 +324,14 @@ class _ObiettivoDetailScreenState extends State<ObiettivoDetailScreen> {
             ),
             if (_obiettivo.descrizione.isNotEmpty) ...[
               const Divider(height: 24),
-              Text('Descrizione',
-                  style: theme.textTheme.labelMedium?.copyWith(
-                    color:
-                        theme.colorScheme.onSurface.withValues(alpha: 0.5),
-                  )),
+              Text(
+                'Descrizione',
+                style: theme.textTheme.labelMedium?.copyWith(
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+                ),
+              ),
               const SizedBox(height: 4),
-              Text(_obiettivo.descrizione,
-                  style: theme.textTheme.bodyMedium),
+              Text(_obiettivo.descrizione, style: theme.textTheme.bodyMedium),
             ],
           ],
         ),
@@ -352,42 +343,45 @@ class _ObiettivoDetailScreenState extends State<ObiettivoDetailScreen> {
     if (!mounted) return;
     await context.read<ObiettivoProvider>().loadObiettivi();
     if (!mounted) return;
-    final refreshed = context
-        .read<ObiettivoProvider>()
-        .tuttiObiettivi
-        .where((o) => o.id == _obiettivo.id)
-        .firstOrNull;
+    final refreshed =
+        context
+            .read<ObiettivoProvider>()
+            .tuttiObiettivi
+            .where((o) => o.id == _obiettivo.id)
+            .firstOrNull;
     if (refreshed != null) {
       setState(() => _obiettivo = refreshed);
     }
   }
 
-  void _confirmDeleteAttivita(
-      BuildContext context, dynamic attivita) {
+  void _confirmDeleteAttivita(BuildContext context, dynamic attivita) {
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Elimina attività'),
-        content: Text(
-            'Vuoi eliminare "${attivita.titolo}"?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Annulla'),
+      builder:
+          (ctx) => AlertDialog(
+            title: const Text('Elimina attività'),
+            content: Text('Vuoi eliminare "${attivita.titolo}"?'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('Annulla'),
+              ),
+              TextButton(
+                onPressed: () {
+                  context.read<AttivitaProvider>().deleteAttivita(
+                    attivita.id,
+                    _obiettivo.id,
+                  );
+                  Navigator.pop(ctx);
+                  _refreshObiettivo();
+                },
+                child: Text(
+                  'Elimina',
+                  style: TextStyle(color: Theme.of(context).colorScheme.error),
+                ),
+              ),
+            ],
           ),
-          TextButton(
-            onPressed: () {
-              context.read<AttivitaProvider>().deleteAttivita(
-                  attivita.id, _obiettivo.id);
-              Navigator.pop(ctx);
-              _refreshObiettivo();
-            },
-            child: Text('Elimina',
-                style: TextStyle(
-                    color: Theme.of(context).colorScheme.error)),
-          ),
-        ],
-      ),
     );
   }
 }
@@ -413,20 +407,26 @@ class _DetailRow extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
         children: [
-          Icon(icon,
-              size: 18,
-              color: theme.colorScheme.onSurface.withValues(alpha: 0.5)),
+          Icon(
+            icon,
+            size: 18,
+            color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+          ),
           const SizedBox(width: 12),
-          Text(label,
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
-              )),
+          Text(
+            label,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+            ),
+          ),
           const Spacer(),
-          Text(value,
-              style: theme.textTheme.bodyMedium?.copyWith(
-                fontWeight: FontWeight.w500,
-                color: valueColor,
-              )),
+          Text(
+            value,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              fontWeight: FontWeight.w500,
+              color: valueColor,
+            ),
+          ),
         ],
       ),
     );

@@ -28,8 +28,9 @@ class _AttivitaDetailScreenState extends State<AttivitaDetailScreen> {
   @override
   void initState() {
     super.initState();
+    final attivitaProvider = context.read<AttivitaProvider>();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<AttivitaProvider>().loadAttivita(widget.obiettivoId);
+      attivitaProvider.loadAttivita(widget.obiettivoId);
     });
   }
 
@@ -43,14 +44,13 @@ class _AttivitaDetailScreenState extends State<AttivitaDetailScreen> {
 
     return Consumer<AttivitaProvider>(
       builder: (context, provider, _) {
-        final attivitaList =
-            provider.attivita.where((a) => a.id == widget.attivitaId);
+        final attivitaList = provider.attivita.where(
+          (a) => a.id == widget.attivitaId,
+        );
         if (attivitaList.isEmpty) {
           return Scaffold(
             appBar: AppBar(),
-            body: const Center(
-              child: Text('Attività non trovata'),
-            ),
+            body: const Center(child: Text('Attività non trovata')),
           );
         }
 
@@ -64,22 +64,23 @@ class _AttivitaDetailScreenState extends State<AttivitaDetailScreen> {
                 icon: const Icon(Icons.edit_outlined),
                 tooltip: 'Modifica attività',
                 onPressed: () async {
+                  final attivitaProvider = context.read<AttivitaProvider>();
+                  final obiettivoProvider = context.read<ObiettivoProvider>();
                   await Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (_) => AttivitaFormScreen(
-                        obiettivoId: widget.obiettivoId,
-                        attivita: attivita,
-                      ),
+                      builder:
+                          (_) => AttivitaFormScreen(
+                            obiettivoId: widget.obiettivoId,
+                            attivita: attivita,
+                          ),
                     ),
                   );
-                  if (context.mounted) {
-                    await context
-                        .read<AttivitaProvider>()
-                        .loadAttivita(widget.obiettivoId);
-                    // Rinfresca anche l'obiettivo padre se necessario
-                    await context.read<ObiettivoProvider>().loadObiettivi();
-                  }
+                  if (!context.mounted) return;
+                  await attivitaProvider.loadAttivita(widget.obiettivoId);
+                  if (!context.mounted) return;
+                  // Rinfresca anche l'obiettivo padre se necessario
+                  await obiettivoProvider.loadObiettivi();
                 },
               ),
             ],
@@ -142,8 +143,9 @@ class _AttivitaDetailScreenState extends State<AttivitaDetailScreen> {
                         Text(
                           'Descrizione',
                           style: theme.textTheme.labelMedium?.copyWith(
-                            color: theme.colorScheme.onSurface
-                                .withValues(alpha: 0.5),
+                            color: theme.colorScheme.onSurface.withValues(
+                              alpha: 0.5,
+                            ),
                           ),
                         ),
                         const SizedBox(height: 6),
@@ -163,6 +165,7 @@ class _AttivitaDetailScreenState extends State<AttivitaDetailScreen> {
     );
   }
 }
+
 class _DetailRow extends StatelessWidget {
   final IconData? icon;
   final Widget? iconWidget;
@@ -186,11 +189,7 @@ class _DetailRow extends StatelessWidget {
       child: Row(
         children: [
           if (iconWidget != null)
-            SizedBox(
-              width: 20,
-              height: 20,
-              child: iconWidget,
-            )
+            SizedBox(width: 20, height: 20, child: iconWidget)
           else if (icon != null)
             Icon(
               icon,
