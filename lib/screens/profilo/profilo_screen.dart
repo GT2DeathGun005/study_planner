@@ -82,19 +82,22 @@ class _ProfiloScreenState extends State<ProfiloScreen> {
     final corsiSuperati = corsi.where((c) => c.stato == 'superato').toList();
     if (corsiSuperati.isEmpty) return [];
 
-    final list = corsiSuperati.map((corso) {
-      final dataCompletamento = _getCompletionDate(corso, esameProv);
+    final List<Map<String, dynamic>> list = [];
+    for (final corso in corsiSuperati) {
       final votoCalcolato = esameProv.calcolaVotoCorso(corso.id);
+      if (votoCalcolato <= 0) continue;
+
+      final dataCompletamento = _getCompletionDate(corso, esameProv);
       int votoCorso = _arrotondaVoto(votoCalcolato);
       if (corso.lode) {
         votoCorso = 31;
       }
-      return {
+      list.add({
         'corso': corso,
         'data': dataCompletamento,
         'voto': votoCorso,
-      };
-    }).toList();
+      });
+    }
 
     list.sort((a, b) => (a['data'] as DateTime).compareTo(b['data'] as DateTime));
 
@@ -172,6 +175,7 @@ class _ProfiloScreenState extends State<ProfiloScreen> {
             height: 200,
             child: LineChart(
               LineChartData(
+                clipData: const FlClipData.all(),
                 minX: 1.0,
                 maxX: dataPoints.length == 1 ? 2.0 : dataPoints.length.toDouble(),
                 minY: minY,
