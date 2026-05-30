@@ -263,7 +263,7 @@ class _ProfiloScreenState extends State<ProfiloScreen> {
                 lineBarsData: [
                   LineChartBarData(
                     spots: spots,
-                    isCurved: true,
+                    isCurved: dataPoints.length > 1,
                     curveSmoothness: 0.3,
                     gradient: const LinearGradient(
                       colors: [
@@ -290,7 +290,7 @@ class _ProfiloScreenState extends State<ProfiloScreen> {
                       },
                     ),
                     belowBarData: BarAreaData(
-                      show: true,
+                      show: dataPoints.length > 1,
                       gradient: LinearGradient(
                         colors: [
                           Colors.red.withValues(alpha: 0.35),
