@@ -94,8 +94,11 @@ class AttivitaCard extends StatelessWidget {
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Text('\u{1F345}',
-                                  style: TextStyle(fontSize: 11)),
+                              Image.asset(
+                                'assets/icona_pomodoro.png',
+                                width: 12,
+                                height: 12,
+                              ),
                               const SizedBox(width: 3),
                               Text(
                                 '${attivita.pomodoroCompletati}/${attivita.pomodoroTotali}',

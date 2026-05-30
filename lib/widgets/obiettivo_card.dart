@@ -185,7 +185,11 @@ class ObiettivoCard extends StatelessWidget {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Text('\u{1F345}', style: TextStyle(fontSize: 13)),
+                    Image.asset(
+                      'assets/icona_pomodoro.png',
+                      width: 14,
+                      height: 14,
+                    ),
                     const SizedBox(width: 4),
                     Text(
                       pomodoroTotali > 0
