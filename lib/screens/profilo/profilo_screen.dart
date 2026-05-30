@@ -175,7 +175,7 @@ class _ProfiloScreenState extends State<ProfiloScreen> {
             height: 200,
             child: LineChart(
               LineChartData(
-                clipData: const FlClipData.all(),
+                clipData: const FlClipData.none(),
                 minX: 1.0,
                 maxX: dataPoints.length == 1 ? 2.0 : dataPoints.length.toDouble(),
                 minY: minY,
