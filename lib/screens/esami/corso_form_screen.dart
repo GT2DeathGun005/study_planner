@@ -211,7 +211,9 @@ class _CorsoFormScreenState extends State<CorsoFormScreen> {
                   labelText: 'Stato',
                   prefixIcon: Icon(Icons.traffic),
                 ),
-                items: Corso.statiDisponibili.map((stato) {
+                items: Corso.statiDisponibili
+                    .where((stato) => stato != 'superato' || _stato == 'superato')
+                    .map((stato) {
                   return DropdownMenuItem(
                     value: stato,
                     child: Text(Corso.statoLabel(stato)),
