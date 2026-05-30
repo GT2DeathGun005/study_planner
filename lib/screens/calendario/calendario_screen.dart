@@ -273,6 +273,17 @@ class _CalendarioScreenState extends State<CalendarioScreen> {
                               title: Text(esame.titolo),
                               subtitle: Text(corso?.nome ?? ''),
                               trailing: Text(df.format(esame.data), style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600, color: Colors.red)),
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => EsameFormScreen(
+                                      esame: esame,
+                                      corsoId: esame.corsoId,
+                                    ),
+                                  ),
+                                );
+                              },
                             ),
                           ),
                         );
