@@ -34,8 +34,7 @@ class _AttivitaFormScreenState extends State<AttivitaFormScreen> {
     final a = widget.attivita;
     _titoloCtrl = TextEditingController(text: a?.titolo ?? '');
     _descrCtrl = TextEditingController(text: a?.descrizione ?? '');
-    _pomodoroCtrl =
-        TextEditingController(text: '${a?.pomodoroTotali ?? 1}');
+    _pomodoroCtrl = TextEditingController(text: '${a?.pomodoroTotali ?? 1}');
   }
 
   @override
@@ -53,7 +52,7 @@ class _AttivitaFormScreenState extends State<AttivitaFormScreen> {
         title: Text(isEditing ? 'Modifica Attività' : 'Nuova Attività'),
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
         child: Form(
           key: _formKey,
           child: Column(
@@ -63,11 +62,14 @@ class _AttivitaFormScreenState extends State<AttivitaFormScreen> {
               TextFormField(
                 controller: _titoloCtrl,
                 decoration: const InputDecoration(
-                    labelText: 'Titolo *',
-                    prefixIcon: Icon(Icons.title)),
-                validator: (v) => v == null || v.trim().isEmpty
-                    ? 'Campo obbligatorio'
-                    : null,
+                  labelText: 'Titolo *',
+                  prefixIcon: Icon(Icons.title),
+                ),
+                validator:
+                    (v) =>
+                        v == null || v.trim().isEmpty
+                            ? 'Campo obbligatorio'
+                            : null,
               ),
               const SizedBox(height: 16),
 
@@ -107,8 +109,7 @@ class _AttivitaFormScreenState extends State<AttivitaFormScreen> {
               FilledButton.icon(
                 onPressed: _save,
                 icon: Icon(isEditing ? Icons.save : Icons.add),
-                label: Text(
-                    isEditing ? 'Salva modifiche' : 'Crea attività'),
+                label: Text(isEditing ? 'Salva modifiche' : 'Crea attività'),
                 style: FilledButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(
@@ -126,15 +127,16 @@ class _AttivitaFormScreenState extends State<AttivitaFormScreen> {
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
     final prov = context.read<AttivitaProvider>();
-    final pomodoroTotali =
-        int.tryParse(_pomodoroCtrl.text.trim()) ?? 1;
+    final pomodoroTotali = int.tryParse(_pomodoroCtrl.text.trim()) ?? 1;
 
     if (isEditing) {
-      await prov.updateAttivita(widget.attivita!.copyWith(
-        titolo: _titoloCtrl.text.trim(),
-        descrizione: _descrCtrl.text.trim(),
-        pomodoroTotali: pomodoroTotali,
-      ));
+      await prov.updateAttivita(
+        widget.attivita!.copyWith(
+          titolo: _titoloCtrl.text.trim(),
+          descrizione: _descrCtrl.text.trim(),
+          pomodoroTotali: pomodoroTotali,
+        ),
+      );
     } else {
       await prov.addAttivita(
         obiettivoId: widget.obiettivoId,

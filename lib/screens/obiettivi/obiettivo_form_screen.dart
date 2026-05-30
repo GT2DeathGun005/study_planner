@@ -59,10 +59,10 @@ class _ObiettivoFormScreenState extends State<ObiettivoFormScreen> {
 
     return Scaffold(
       appBar: AppBar(
-          title:
-              Text(isEditing ? 'Modifica Obiettivo' : 'Nuovo Obiettivo')),
+        title: Text(isEditing ? 'Modifica Obiettivo' : 'Nuovo Obiettivo'),
+      ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
         child: Form(
           key: _formKey,
           child: Column(
@@ -72,16 +72,22 @@ class _ObiettivoFormScreenState extends State<ObiettivoFormScreen> {
               TextFormField(
                 controller: _titoloCtrl,
                 decoration: const InputDecoration(
-                    labelText: 'Titolo *',
-                    prefixIcon: Icon(Icons.title)),
+                  labelText: 'Titolo *',
+                  prefixIcon: Icon(Icons.title),
+                ),
                 validator: (v) {
                   if (v == null || v.trim().isEmpty) {
                     return 'Campo obbligatorio';
                   }
                   final trimmed = v.trim().toLowerCase();
-                  final exists = context.read<ObiettivoProvider>().tuttiObiettivi.any(
-                    (o) => o.titolo.trim().toLowerCase() == trimmed && o.id != widget.obiettivo?.id
-                  );
+                  final exists = context
+                      .read<ObiettivoProvider>()
+                      .tuttiObiettivi
+                      .any(
+                        (o) =>
+                            o.titolo.trim().toLowerCase() == trimmed &&
+                            o.id != widget.obiettivo?.id,
+                      );
                   if (exists) {
                     return 'Esiste già un obiettivo con questo titolo';
                   }
@@ -95,20 +101,31 @@ class _ObiettivoFormScreenState extends State<ObiettivoFormScreen> {
                 contentPadding: EdgeInsets.zero,
                 leading: const Icon(Icons.event),
                 title: const Text('Data pianificata'),
-                subtitle: Text(_dataPianificata != null
-                    ? _getFormattedDate(_dataPianificata!)
-                    : 'Non impostata'),
-                trailing: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    if (_dataPianificata != null)
-                      IconButton(
-                        icon: const Icon(Icons.clear, size: 18),
-                        onPressed: () =>
-                            setState(() => _dataPianificata = null),
-                      ),
-                    const Icon(Icons.chevron_right),
-                  ],
+                subtitle: Text(
+                  _dataPianificata != null
+                      ? _getFormattedDate(_dataPianificata!)
+                      : 'Non impostata',
+                ),
+                trailing: SizedBox(
+                  width: 80,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      if (_dataPianificata != null)
+                        SizedBox(
+                          width: 32,
+                          height: 32,
+                          child: IconButton(
+                            padding: EdgeInsets.zero,
+                            icon: const Icon(Icons.clear, size: 18),
+                            onPressed:
+                                () => setState(() => _dataPianificata = null),
+                          ),
+                        ),
+                      const Icon(Icons.chevron_right),
+                    ],
+                  ),
                 ),
                 onTap: () async {
                   final d = await showDatePicker(
@@ -128,13 +145,17 @@ class _ObiettivoFormScreenState extends State<ObiettivoFormScreen> {
               DropdownButtonFormField<String>(
                 initialValue: _corsoId,
                 decoration: const InputDecoration(
-                    labelText: 'Corso',
-                    prefixIcon: Icon(Icons.book)),
+                  labelText: 'Corso',
+                  prefixIcon: Icon(Icons.book),
+                ),
                 items: [
                   const DropdownMenuItem(
-                      value: null, child: Text('Nessun corso')),
-                  ...corsi.map((c) => DropdownMenuItem(
-                      value: c.id, child: Text(c.nome))),
+                    value: null,
+                    child: Text('Nessun corso'),
+                  ),
+                  ...corsi.map(
+                    (c) => DropdownMenuItem(value: c.id, child: Text(c.nome)),
+                  ),
                 ],
                 onChanged: (v) => setState(() => _corsoId = v),
               ),
@@ -144,13 +165,18 @@ class _ObiettivoFormScreenState extends State<ObiettivoFormScreen> {
               DropdownButtonFormField<String>(
                 initialValue: _priorita,
                 decoration: const InputDecoration(
-                    labelText: 'Priorità',
-                    prefixIcon: Icon(Icons.priority_high)),
-                items: Obiettivo.prioritaDisponibili
-                    .map((p) => DropdownMenuItem(
-                        value: p,
-                        child: Text(Obiettivo.prioritaLabel(p))))
-                    .toList(),
+                  labelText: 'Priorità',
+                  prefixIcon: Icon(Icons.priority_high),
+                ),
+                items:
+                    Obiettivo.prioritaDisponibili
+                        .map(
+                          (p) => DropdownMenuItem(
+                            value: p,
+                            child: Text(Obiettivo.prioritaLabel(p)),
+                          ),
+                        )
+                        .toList(),
                 onChanged: (v) {
                   if (v != null) setState(() => _priorita = v);
                 },
@@ -172,8 +198,7 @@ class _ObiettivoFormScreenState extends State<ObiettivoFormScreen> {
               FilledButton.icon(
                 onPressed: _save,
                 icon: Icon(isEditing ? Icons.save : Icons.add),
-                label: Text(
-                    isEditing ? 'Salva modifiche' : 'Crea obiettivo'),
+                label: Text(isEditing ? 'Salva modifiche' : 'Crea obiettivo'),
                 style: FilledButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(
@@ -192,15 +217,17 @@ class _ObiettivoFormScreenState extends State<ObiettivoFormScreen> {
     if (!_formKey.currentState!.validate()) return;
     final prov = context.read<ObiettivoProvider>();
     if (isEditing) {
-      prov.updateObiettivo(widget.obiettivo!.copyWith(
-        titolo: _titoloCtrl.text.trim(),
-        descrizione: _descrCtrl.text.trim(),
-        corsoId: _corsoId,
-        clearCorsoId: _corsoId == null,
-        priorita: _priorita,
-        dataPianificata: _dataPianificata,
-        clearDataPianificata: _dataPianificata == null,
-      ));
+      prov.updateObiettivo(
+        widget.obiettivo!.copyWith(
+          titolo: _titoloCtrl.text.trim(),
+          descrizione: _descrCtrl.text.trim(),
+          corsoId: _corsoId,
+          clearCorsoId: _corsoId == null,
+          priorita: _priorita,
+          dataPianificata: _dataPianificata,
+          clearDataPianificata: _dataPianificata == null,
+        ),
+      );
     } else {
       prov.addObiettivo(
         titolo: _titoloCtrl.text.trim(),
