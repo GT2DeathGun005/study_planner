@@ -126,7 +126,7 @@ class _ObiettivoFormScreenState extends State<ObiettivoFormScreen> {
 
               // 3. Corso
               DropdownButtonFormField<String>(
-                value: _corsoId,
+                initialValue: _corsoId,
                 decoration: const InputDecoration(
                     labelText: 'Corso',
                     prefixIcon: Icon(Icons.book)),
@@ -142,7 +142,7 @@ class _ObiettivoFormScreenState extends State<ObiettivoFormScreen> {
 
               // 4. Priorità
               DropdownButtonFormField<String>(
-                value: _priorita,
+                initialValue: _priorita,
                 decoration: const InputDecoration(
                     labelText: 'Priorità',
                     prefixIcon: Icon(Icons.priority_high)),
