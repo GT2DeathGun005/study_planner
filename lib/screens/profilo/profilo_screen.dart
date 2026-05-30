@@ -503,7 +503,7 @@ class _ProfiloScreenState extends State<ProfiloScreen> {
                                       color: Colors.deepOrange.withValues(alpha: 0.1),
                                       borderRadius: BorderRadius.circular(10),
                                     ),
-                                    child: const Text('🍅', style: TextStyle(fontSize: 16)),
+                                    child: const Text('\u{1F345}', style: TextStyle(fontSize: 16)),
                                   ),
                                   const SizedBox(width: 12),
                                   Expanded(

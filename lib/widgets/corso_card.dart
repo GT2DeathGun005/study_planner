@@ -70,6 +70,8 @@ class CorsoCard extends StatelessWidget {
         ? _arrotondaVoto(votoCalcolato!)
         : null;
     final hasVoto = votoIntero != null;
+    final showVotoPrevisto = !hasVoto && corso.votoPrevisto != null;
+    final showBadge = hasVoto || showVotoPrevisto;
 
     final card = Card(
       margin: EdgeInsets.zero,
@@ -109,7 +111,7 @@ class CorsoCard extends StatelessWidget {
                             // Padding a destra per non sovrapporsi al badge voto
                             Padding(
                               padding: EdgeInsets.only(
-                                  right: hasVoto ? 60 : 0),
+                                  right: showBadge ? 60 : 0),
                               child: Text(
                                 corso.nome,
                                 style:
@@ -172,7 +174,7 @@ class CorsoCard extends StatelessWidget {
               ),
             ),
             // Badge voto nell'angolo in alto a destra
-            if (hasVoto)
+            if (showBadge)
               Positioned(
                 top: 0,
                 right: 0,
@@ -180,7 +182,9 @@ class CorsoCard extends StatelessWidget {
                   padding: const EdgeInsets.only(
                       left: 12, right: 10, top: 6, bottom: 8),
                   decoration: BoxDecoration(
-                    color: Colors.amber.withValues(alpha: 0.15),
+                    color: hasVoto
+                        ? Colors.amber.withValues(alpha: 0.15)
+                        : Colors.grey.withValues(alpha: 0.2),
                     borderRadius: const BorderRadius.only(
                       bottomLeft: Radius.elliptical(24, 20),
                     ),
@@ -189,18 +193,20 @@ class CorsoCard extends StatelessWidget {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Icon(
-                        (corso.stato == 'superato')
-                            ? (corso.lode ? Icons.star_rounded : Icons.check_rounded)
-                            : Icons.star_rounded,
+                        hasVoto
+                            ? ((corso.stato == 'superato')
+                                ? (corso.lode ? Icons.star_rounded : Icons.check_rounded)
+                                : Icons.star_rounded)
+                            : Icons.trending_up,
                         size: 16,
-                        color: Colors.amber[700],
+                        color: hasVoto ? Colors.amber[700] : theme.colorScheme.onSurface.withValues(alpha: 0.6),
                       ),
                       const SizedBox(width: 3),
                       Text(
-                        '$votoIntero',
+                        hasVoto ? '$votoIntero' : '${corso.votoPrevisto}',
                         style: theme.textTheme.labelMedium?.copyWith(
                           fontWeight: FontWeight.w800,
-                          color: Colors.amber[700],
+                          color: hasVoto ? Colors.amber[700] : theme.colorScheme.onSurface.withValues(alpha: 0.6),
                         ),
                       ),
                     ],

@@ -185,7 +185,7 @@ class ObiettivoCard extends StatelessWidget {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Text('🍅', style: TextStyle(fontSize: 13)),
+                    const Text('\u{1F345}', style: TextStyle(fontSize: 13)),
                     const SizedBox(width: 4),
                     Text(
                       pomodoroTotali > 0

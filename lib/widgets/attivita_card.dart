@@ -94,7 +94,7 @@ class AttivitaCard extends StatelessWidget {
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Text('🍅',
+                              const Text('\u{1F345}',
                                   style: TextStyle(fontSize: 11)),
                               const SizedBox(width: 3),
                               Text(
