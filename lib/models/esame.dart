@@ -35,7 +35,6 @@ class Esame {
     'scritto',
     'orale',
     'progetto',
-    'consegna',
     'altro',
   ];
 
@@ -61,8 +60,6 @@ class Esame {
         return 'Orale';
       case 'progetto':
         return 'Progetto';
-      case 'consegna':
-        return 'Consegna';
       case 'altro':
         return 'Altro';
       default:
