@@ -210,7 +210,7 @@ class _CalendarioScreenState extends State<CalendarioScreen> {
                             decoration: BoxDecoration(color: Colors.red.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)),
                             child: const Icon(Icons.quiz, color: Colors.red, size: 20),
                           ),
-                          title: Text(esame.titolo),
+                          title: Text(esame.titolo, style: TextStyle(decoration: esame.stato == 'completato' ? TextDecoration.lineThrough : null)),
                           subtitle: Text(corso?.nome ?? 'Corso non trovato'),
                           onTap: () {
                             Navigator.push(

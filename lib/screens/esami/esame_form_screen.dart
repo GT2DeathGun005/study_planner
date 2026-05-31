@@ -533,55 +533,64 @@ class _EsameFormScreenState extends State<EsameFormScreen> {
   /// Verifica se il corso deve passare automaticamente allo stato 'superato'.
   /// Condizioni: peso totale = 100% e tutti gli esami completati con voto.
   Future<void> _checkAutoSuperato(CorsoProvider corsoProv, EsameProvider esameProv) async {
-    final pesoTotale = esameProv.getPercentualeTotale(_corsoId);
-    if (pesoTotale < 100) return;
+    final corso = corsoProv.getCorsoById(_corsoId);
+    if (corso == null) return;
 
     final esamiCorso = esameProv.getEsamiCorso(_corsoId);
-    if (esamiCorso.isEmpty) return;
+    final pesoTotale = esameProv.getPercentualeTotale(_corsoId);
 
-    final tuttiCompletati = esamiCorso.every(
-      (e) => e.stato == 'completato' && e.voto != null,
-    );
+    bool isCompletato = false;
+    if (pesoTotale >= 100 && esamiCorso.isNotEmpty) {
+      isCompletato = esamiCorso.every((e) => e.stato == 'completato' && e.voto != null);
+    }
 
-    if (tuttiCompletati) {
-      final corso = corsoProv.getCorsoById(_corsoId);
-      if (corso != null) {
-        final votoCalcolato = esameProv.calcolaVotoCorso(_corsoId);
-        final votoArrotondato = _arrotondaVoto(votoCalcolato);
-        
-        bool lode = false;
-        if (votoArrotondato == 30) {
-          if (mounted) {
-            final answer = await showDialog<bool>(
-              context: context,
-              barrierDismissible: false,
-              builder: (context) {
-                return AlertDialog(
-                  title: const Text('Congratulazioni! 🎉'),
-                  content: const Text(
-                    'Il voto complessivo calcolato è 30. Questo corso è stato superato con lode?'
+    if (isCompletato) {
+      final votoCalcolato = esameProv.calcolaVotoCorso(_corsoId);
+      final votoArrotondato = _arrotondaVoto(votoCalcolato);
+      
+      bool lode = corso.lode;
+      if (votoArrotondato == 30 && corso.stato != 'superato') {
+        if (mounted) {
+          final answer = await showDialog<bool>(
+            context: context,
+            barrierDismissible: false,
+            builder: (context) {
+              return AlertDialog(
+                title: const Text('Congratulazioni! 🎉'),
+                content: const Text(
+                  'Il voto complessivo calcolato è 30. Questo corso è stato superato con lode?'
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context, false),
+                    child: const Text('No'),
                   ),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(context, false),
-                      child: const Text('No'),
-                    ),
-                    ElevatedButton(
-                      onPressed: () => Navigator.pop(context, true),
-                      child: const Text('Sì, con lode'),
-                    ),
-                  ],
-                );
-              },
-            );
-            lode = answer ?? false;
-          }
+                  ElevatedButton(
+                    onPressed: () => Navigator.pop(context, true),
+                    child: const Text('Sì, con lode'),
+                  ),
+                ],
+              );
+            },
+          );
+          lode = answer ?? false;
         }
-        
+      }
+      
+      if (corso.stato != 'superato' || corso.lode != lode) {
         await corsoProv.updateCorso(
           corso.copyWith(
             stato: 'superato',
             lode: lode,
+          ),
+        );
+      }
+    } else {
+      if (corso.stato == 'superato') {
+        await corsoProv.updateCorso(
+          corso.copyWith(
+            stato: 'in_corso',
+            lode: false,
           ),
         );
       }

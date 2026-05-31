@@ -156,8 +156,7 @@ class _EsamiScreenState extends State<EsamiScreen> {
                   itemBuilder: (context, index) {
                     final corso = corsi[index];
                     final esameProv = context.read<EsameProvider>();
-                    final pesoTotale = esameProv.getPercentualeTotale(corso.id);
-                    final votoCalc = pesoTotale >= 100
+                    final votoCalc = corso.stato == 'superato'
                         ? esameProv.calcolaVotoCorso(corso.id)
                         : null;
                     return CorsoCard(
