@@ -34,9 +34,8 @@ class _EsameFormScreenState extends State<EsameFormScreen> {
 
   bool get isEditing => widget.esame != null;
 
-  /// Un esame completato non può essere modificato.
-  bool get isReadOnly =>
-      isEditing && widget.esame!.stato == 'completato';
+  /// Modalità visualizzazione se l'esame esiste già
+  bool _isViewMode = false;
 
   Color _prioritaColor(String priorita) {
     switch (priorita) {
@@ -66,6 +65,7 @@ class _EsameFormScreenState extends State<EsameFormScreen> {
   void initState() {
     super.initState();
     final e = widget.esame;
+    _isViewMode = e != null;
     _corsoId = e?.corsoId ?? widget.corsoId!;
     _titoloController = TextEditingController(text: e?.titolo ?? '');
     _noteController = TextEditingController(text: e?.note ?? '');
@@ -107,15 +107,22 @@ class _EsameFormScreenState extends State<EsameFormScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(isReadOnly
+        title: Text(_isViewMode
             ? 'Dettaglio Esame'
             : isEditing
                 ? 'Modifica Esame'
                 : 'Nuovo Esame'),
+        actions: [
+          if (_isViewMode)
+            IconButton(
+              icon: const Icon(Icons.edit),
+              onPressed: () => setState(() => _isViewMode = false),
+            ),
+        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
-        child: isReadOnly
+        child: _isViewMode
             ? _buildInfoSection(context, theme)
             : _buildForm(context, theme, disponibile),
       ),
@@ -275,7 +282,7 @@ class _EsameFormScreenState extends State<EsameFormScreen> {
 
           // Stato (solo Programmato / Completato)
           DropdownButtonFormField<String>(
-            initialValue: _stato,
+            value: _stato,
             decoration: const InputDecoration(
               labelText: 'Stato',
               prefixIcon: Icon(Icons.traffic),
@@ -287,7 +294,19 @@ class _EsameFormScreenState extends State<EsameFormScreen> {
               );
             }).toList(),
             onChanged: (v) {
-              if (v != null) setState(() => _stato = v);
+              if (v != null) {
+                setState(() {
+                  _stato = v;
+                  if (v == 'programmato') {
+                    final now = DateTime.now();
+                    final today = DateTime(now.year, now.month, now.day);
+                    final dataCorrente = DateTime(_data.year, _data.month, _data.day);
+                    if (dataCorrente.isBefore(today)) {
+                      _data = now;
+                    }
+                  }
+                });
+              }
             },
           ),
           const SizedBox(height: 16),
@@ -370,7 +389,7 @@ class _EsameFormScreenState extends State<EsameFormScreen> {
 
     return TextFormField(
       controller: _pesoController,
-      readOnly: isReadOnly,
+      readOnly: false,
       decoration: InputDecoration(
         labelText: 'Peso % *',
         prefixIcon: const Icon(Icons.percent),
@@ -416,7 +435,15 @@ class _EsameFormScreenState extends State<EsameFormScreen> {
       locale: const Locale('it', 'IT'),
     );
     if (picked != null) {
-      setState(() => _data = picked);
+      setState(() {
+        _data = picked;
+        final now = DateTime.now();
+        final today = DateTime(now.year, now.month, now.day);
+        final pickedDate = DateTime(picked.year, picked.month, picked.day);
+        if (pickedDate.isBefore(today)) {
+          _stato = 'completato';
+        }
+      });
     }
   }
 
@@ -434,6 +461,38 @@ class _EsameFormScreenState extends State<EsameFormScreen> {
     final corsoProv = context.read<CorsoProvider>();
     final voto = int.tryParse(_votoController.text);
     final peso = int.tryParse(_pesoController.text) ?? 100;
+
+    // --- CONTROLLO MEDIA FINALE >= 18 ---
+    if (_stato == 'completato' && voto != null) {
+      final usataAltri = esameProv.getPercentualeTotale(_corsoId, excludeEsameId: widget.esame?.id);
+      final pesoTotaleFuturo = usataAltri + peso;
+
+      if (pesoTotaleFuturo >= 100) {
+        final esamiAltri = esameProv.getEsamiCorso(_corsoId).where((e) => e.id != widget.esame?.id).toList();
+        final altriCompletati = esamiAltri.every((e) => e.stato == 'completato' && e.voto != null);
+        
+        if (altriCompletati || esamiAltri.isEmpty) {
+          final puntiAltri = esamiAltri.fold<double>(0, (sum, e) => sum + e.puntiPonderati);
+          final puntiQuesto = (voto * peso) / 100;
+          final votoCalcolato = puntiAltri + puntiQuesto;
+          final votoArrotondato = _arrotondaVoto(votoCalcolato);
+
+          if (votoArrotondato < 18) {
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Mi dispiace ma non raggiungi la sufficienza. Impossibile completare il corso.'),
+                  backgroundColor: Theme.of(context).colorScheme.error,
+                ),
+              );
+            }
+            return;
+          }
+        }
+      }
+    }
+    // --- FINE CONTROLLO ---
+
 
     if (isEditing) {
       final updated = widget.esame!.copyWith(
