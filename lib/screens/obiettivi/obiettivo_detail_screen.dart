@@ -366,13 +366,15 @@ class _ObiettivoDetailScreenState extends State<ObiettivoDetailScreen> {
                 child: const Text('Annulla'),
               ),
               TextButton(
-                onPressed: () {
-                  context.read<AttivitaProvider>().deleteAttivita(
+                onPressed: () async {
+                  await context.read<AttivitaProvider>().deleteAttivita(
                     attivita.id,
                     _obiettivo.id,
                   );
-                  Navigator.pop(ctx);
-                  _refreshObiettivo();
+                  if (ctx.mounted) {
+                    Navigator.pop(ctx);
+                  }
+                  await _refreshObiettivo();
                 },
                 child: Text(
                   'Elimina',

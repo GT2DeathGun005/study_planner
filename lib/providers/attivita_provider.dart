@@ -132,14 +132,9 @@ class AttivitaProvider extends ChangeNotifier {
   }
 
   /// Toggle completamento di un'attività e verifica stato obiettivo.
-  /// Non permette di togliere la spunta se i pomodori sono completi.
   Future<void> toggleCompletata(String id) async {
     final attivita = _attivita.firstWhere((a) => a.id == id);
-    // Blocca la rimozione della spunta se i pomodori sono stati completati
-    if (attivita.completata &&
-        attivita.pomodoroCompletati >= attivita.pomodoroTotali) {
-      return;
-    }
+    // Rimosso il blocco: ora è possibile rimuovere la spunta anche se i pomodori sono stati completati.
     await _repository.toggleCompletata(id, !attivita.completata);
     await _refreshAll(attivita.obiettivoId);
     await _verificaStatoObiettivo(attivita.obiettivoId);

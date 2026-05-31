@@ -131,7 +131,7 @@ class _ProfiloScreenState extends State<ProfiloScreen> {
     if (dataPoints.isEmpty) {
       return Container(
         margin: const EdgeInsets.symmetric(horizontal: 4),
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(58),
         decoration: BoxDecoration(
           color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.2),
           borderRadius: BorderRadius.circular(16),

@@ -108,9 +108,77 @@ class _CorsoFormScreenState extends State<CorsoFormScreen> {
               ),
               const SizedBox(height: 16),
 
-              // Tipo Laurea e Anno
+              // Anno e Semestre
               Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  Expanded(
+                    child: DropdownButtonFormField<int>(
+                      initialValue: _anno,
+                      decoration: const InputDecoration(
+                        labelText: 'Anno',
+                        prefixIcon: Icon(Icons.looks_one),
+                      ),
+                      items: Corso.anniPerTipo(_tipoLaurea).map((a) {
+                        return DropdownMenuItem(
+                          value: a,
+                          child: Text('$a° Anno'),
+                        );
+                      }).toList(),
+                      onChanged: (v) {
+                        if (v != null) setState(() => _anno = v);
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: DropdownButtonFormField<int>(
+                      initialValue: _semestre,
+                      decoration: const InputDecoration(
+                        labelText: 'Semestre',
+                        prefixIcon: Icon(Icons.calendar_today),
+                      ),
+                      items: const [
+                        DropdownMenuItem(value: 1, child: Text('1° Semestre')),
+                        DropdownMenuItem(value: 2, child: Text('2° Semestre')),
+                      ],
+                      onChanged: (v) {
+                        if (v != null) setState(() => _semestre = v);
+                      },
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+
+              // CFU e Tipo Laurea
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: TextFormField(
+                      controller: _cfuController,
+                      decoration: const InputDecoration(
+                        labelText: 'CFU *',
+                        prefixIcon: Icon(Icons.star),
+                      ),
+                      keyboardType: TextInputType.number,
+                      validator: (v) {
+                        if (v == null || v.trim().isEmpty) {
+                          return 'Obbligatorio';
+                        }
+                        final parsed = int.tryParse(v);
+                        if (parsed == null || parsed <= 0) {
+                          return 'Valore non valido';
+                        }
+                        if (parsed > 30) {
+                          return 'Massimo 30 CFU';
+                        }
+                        return null;
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 16),
                   Expanded(
                     child: DropdownButtonFormField<String>(
                       initialValue: _tipoLaurea,
@@ -135,68 +203,6 @@ class _CorsoFormScreenState extends State<CorsoFormScreen> {
                             }
                           });
                         }
-                      },
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: DropdownButtonFormField<int>(
-                      initialValue: _anno,
-                      decoration: const InputDecoration(
-                        labelText: 'Anno',
-                        prefixIcon: Icon(Icons.looks_one),
-                      ),
-                      items: Corso.anniPerTipo(_tipoLaurea).map((a) {
-                        return DropdownMenuItem(
-                          value: a,
-                          child: Text('$a° Anno'),
-                        );
-                      }).toList(),
-                      onChanged: (v) {
-                        if (v != null) setState(() => _anno = v);
-                      },
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-
-              // CFU e Semestre in riga
-              Row(
-                children: [
-                  Expanded(
-                    child: TextFormField(
-                      controller: _cfuController,
-                      decoration: const InputDecoration(
-                        labelText: 'CFU *',
-                        prefixIcon: Icon(Icons.star),
-                      ),
-                      keyboardType: TextInputType.number,
-                      validator: (v) {
-                        if (v == null || v.trim().isEmpty) {
-                          return 'Obbligatorio';
-                        }
-                        if (int.tryParse(v) == null || int.parse(v) <= 0) {
-                          return 'Valore non valido';
-                        }
-                        return null;
-                      },
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: DropdownButtonFormField<int>(
-                      initialValue: _semestre,
-                      decoration: const InputDecoration(
-                        labelText: 'Semestre',
-                        prefixIcon: Icon(Icons.calendar_today),
-                      ),
-                      items: const [
-                        DropdownMenuItem(value: 1, child: Text('1° Semestre')),
-                        DropdownMenuItem(value: 2, child: Text('2° Semestre')),
-                      ],
-                      onChanged: (v) {
-                        if (v != null) setState(() => _semestre = v);
                       },
                     ),
                   ),
