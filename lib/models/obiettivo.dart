@@ -26,7 +26,7 @@ class Obiettivo {
   /// Stati disponibili per un obiettivo.
   static const List<String> statiDisponibili = ['prefissato', 'raggiunto'];
 
-  /// Label leggibile per lo stato.
+  /// Label per lo stato.
   static String statoLabel(String s) {
     switch (s) {
       case 'prefissato':
@@ -45,7 +45,7 @@ class Obiettivo {
     'bassa',
   ];
 
-  /// Label leggibile per la priorità.
+  /// Label per la priorità.
   static String prioritaLabel(String p) {
     switch (p) {
       case 'alta':

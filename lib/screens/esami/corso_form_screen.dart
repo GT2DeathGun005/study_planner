@@ -5,7 +5,7 @@ import '../../providers/corso_provider.dart';
 
 /// Schermata per creare o modificare un Corso.
 ///
-/// Se viene passato un [corso] esistente, pre-compila i campi per la modifica.
+/// Se viene passato un corso esistente, pre-compila i campi per la modifica.
 /// Altrimenti mostra un form vuoto per la creazione.
 class CorsoFormScreen extends StatefulWidget {
   final Corso? corso;

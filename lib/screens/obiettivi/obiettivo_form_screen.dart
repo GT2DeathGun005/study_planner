@@ -68,7 +68,7 @@ class _ObiettivoFormScreenState extends State<ObiettivoFormScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // 1. Titolo
+              // Titolo
               TextFormField(
                 controller: _titoloCtrl,
                 decoration: const InputDecoration(
@@ -96,7 +96,7 @@ class _ObiettivoFormScreenState extends State<ObiettivoFormScreen> {
               ),
               const SizedBox(height: 16),
 
-              // 2. Data pianificata (subito dopo il titolo)
+              // Data pianificata 
               ListTile(
                 contentPadding: EdgeInsets.zero,
                 leading: const Icon(Icons.event),
@@ -146,7 +146,7 @@ class _ObiettivoFormScreenState extends State<ObiettivoFormScreen> {
               const Divider(),
               const SizedBox(height: 16),
 
-              // 3. Corso
+              // Corso
               DropdownButtonFormField<String>(
                 initialValue: _corsoId,
                 decoration: const InputDecoration(
@@ -166,7 +166,7 @@ class _ObiettivoFormScreenState extends State<ObiettivoFormScreen> {
               ),
               const SizedBox(height: 16),
 
-              // 4. Priorità
+              // Priorità
               DropdownButtonFormField<String>(
                 initialValue: _priorita,
                 decoration: const InputDecoration(
@@ -188,7 +188,7 @@ class _ObiettivoFormScreenState extends State<ObiettivoFormScreen> {
               ),
               const SizedBox(height: 16),
 
-              // 5. Descrizione (in fondo)
+              // Descrizione 
               TextFormField(
                 controller: _descrCtrl,
                 decoration: const InputDecoration(

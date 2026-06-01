@@ -51,7 +51,7 @@ class Esame {
     'completato',
   ];
 
-  /// Label leggibile per la tipologia.
+  /// Label per la tipologia.
   static String tipologiaLabel(String tipo) {
     switch (tipo) {
       case 'scritto':
@@ -67,7 +67,7 @@ class Esame {
     }
   }
 
-  /// Label leggibile per la priorità.
+  /// Label per la priorità.
   static String prioritaLabel(String p) {
     switch (p) {
       case 'alta':
@@ -81,7 +81,7 @@ class Esame {
     }
   }
 
-  /// Label leggibile per lo stato.
+  /// Label per lo stato.
   static String statoLabel(String s) {
     switch (s) {
       case 'programmato':
