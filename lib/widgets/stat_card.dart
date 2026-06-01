@@ -32,7 +32,7 @@ class StatCard extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
-          child: [
+          children: [
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
