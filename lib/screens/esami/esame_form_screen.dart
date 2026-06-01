@@ -282,7 +282,7 @@ class _EsameFormScreenState extends State<EsameFormScreen> {
 
           // Stato (solo Programmato / Completato)
           DropdownButtonFormField<String>(
-            value: _stato,
+            initialValue: _stato,
             decoration: const InputDecoration(
               labelText: 'Stato',
               prefixIcon: Icon(Icons.traffic),

@@ -371,7 +371,7 @@ class _ProfiloScreenState extends State<ProfiloScreen> {
                           : mediaMagistrale;
                       final valueStr = mediaValue > 0
                           ? mediaValue.toStringAsFixed(1)
-                          : '-';
+                          : '0';
 
                       return Card(
                         elevation: 0,

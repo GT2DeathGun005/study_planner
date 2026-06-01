@@ -1,4 +1,4 @@
-# Study Planner & Exam Tracker App
+# Pantone Planner App
 
 App Flutter per studenti universitari che permette di gestire corsi, esami, sessioni di studio, attività/obiettivi e monitorare i propri progressi accademici.
 
@@ -59,15 +59,18 @@ start ms-settings:developers
 lib/
 ├── main.dart                          # Entry point, Provider setup, tema Material 3
 ├── models/
+│   ├── attivita.dart                  # Modello Attività
 │   ├── corso.dart                     # Modello Corso
-│   ├── esame.dart                     # Modello Esame/Scadenza
-│   └── obiettivo.dart                 # Modello Obiettivo/Task
+│   ├── esame.dart                     # Modello Esame
+│   └── obiettivo.dart                 # Modello Obiettivo macro
 ├── services/
+│   ├── attivita_repository.dart       # CRUD attività
 │   ├── database_helper.dart           # Singleton SQLite (creazione tabelle, connessione)
 │   ├── corso_repository.dart          # CRUD corsi
 │   ├── esame_repository.dart          # CRUD esami
 │   └── obiettivo_repository.dart      # CRUD obiettivi
 ├── providers/
+│   ├── attivita_provider.dart         # ChangeNotifier per attività
 │   ├── corso_provider.dart            # ChangeNotifier per corsi
 │   ├── esame_provider.dart            # ChangeNotifier per esami
 │   └── obiettivo_provider.dart        # ChangeNotifier per obiettivi
@@ -80,16 +83,20 @@ lib/
 │   │   └── esame_form_screen.dart     # Crea/modifica esame
 │   ├── obiettivi/
 │   │   ├── obiettivi_screen.dart      # Lista obiettivi con filtri
+│   │   ├── obiettivo_detail_screen.dart # Dettaglio obiettivo + lista attività
 │   │   ├── obiettivo_form_screen.dart # Crea/modifica obiettivo
+│   │   ├── attivita_detail_screen.dart # Dettaglio attività
+│   │   ├── attivita_form_screen.dart  # Crea/modifica attività
 │   │   └── pomodoro_screen.dart       # Timer Pomodoro
 │   ├── calendario/
 │   │   └── calendario_screen.dart     # Calendario mensile/settimanale
 │   └── profilo/
 │       └── profilo_screen.dart        # Dashboard analytics
 └── widgets/
+    ├── attivita_card.dart             # Card attività riutilizzabile
     ├── corso_card.dart                # Card corso riutilizzabile
     ├── esame_card.dart                # Card esame riutilizzabile
-    ├── obiettivo_card.dart            # Card obiettivo con checkbox
+    ├── obiettivo_card.dart            # Card obiettivo con progresso
     ├── stat_card.dart                 # Card KPI per dashboard
     └── pomodoro_timer_widget.dart     # Timer circolare animato
 ```
@@ -131,74 +138,89 @@ Il database SQLite viene creato automaticamente al primo avvio dell'app tramite 
 | id | String (UUID) | Chiave primaria |
 | nome | String | Nome del corso |
 | docente | String | Docente |
-| semestre | int | 1 o 2 |
+| semestre | int | Semestre accademico (1 o 2) |
+| anno | int | Anno accademico (1-3 triennale, 1-2 magistrale) |
+| tipoLaurea | String | triennale, magistrale |
 | cfu | int | Crediti formativi |
 | descrizione | String | Note/descrizione |
-| stato | String | da_iniziare, in_corso, completato, da_ripassare, superato |
+| stato | String | da_iniziare, in_corso, terminato, da_ripassare, superato |
 | votoPrevisto | int? | Voto previsto/desiderato |
-| votoOttenuto | int? | Voto finale ottenuto |
+| lode | bool | Indica se è stata conseguita la lode |
 | materiali | String | Riferimenti e materiali |
 
 ### Esame
 | Campo | Tipo | Descrizione |
 |-------|------|-------------|
 | id | String (UUID) | Chiave primaria |
-| titolo | String | Titolo esame/scadenza |
+| titolo | String | Titolo dell'esame o dell'appello |
 | corsoId | String | FK verso Corso |
-| data | DateTime | Data esame |
-| tipologia | String | scritto, orale, progetto, consegna, altro |
+| data | DateTime | Data della prova |
+| tipologia | String | scritto, orale, progetto, altro |
 | priorita | String | alta, media, bassa |
-| stato | String | programmato, completato, annullato |
-| voto | int? | Voto ottenuto |
+| stato | String | programmato, completato |
+| voto | int? | Voto finale conseguito (18-30) |
+| pesoPercentuale | int | Incidenza sul voto del corso (0-100%) |
 | note | String | Note aggiuntive |
 
-### Obiettivo
+### Obiettivo (Macro-obiettivo)
 | Campo | Tipo | Descrizione |
 |-------|------|-------------|
 | id | String (UUID) | Chiave primaria |
-| titolo | String | Nome del task |
+| titolo | String | Titolo del macro-obiettivo |
 | descrizione | String | Descrizione |
 | corsoId | String? | FK opzionale verso Corso |
-| esameId | String? | FK opzionale verso Esame |
 | priorita | String | alta, media, bassa |
-| tempoStimato | int | Minuti pianificati |
-| tempoEffettivo | int | Minuti accumulati (Pomodoro) |
-| completato | bool | Stato completamento |
-| dataPianificata | DateTime? | Data nel calendario |
-| dataScadenza | DateTime? | Scadenza |
+| stato | String | prefissato, raggiunto (automatico se tutte le attività sono completate) |
+| dataPianificata | DateTime? | Data pianificata per l'obiettivo |
+
+### Attività (Sotto-task)
+| Campo | Tipo | Descrizione |
+|-------|------|-------------|
+| id | String (UUID) | Chiave primaria |
+| obiettivoId | String | FK verso Obiettivo |
+| titolo | String | Titolo del sotto-task |
+| descrizione | String | Descrizione dettagliata |
+| pomodoroTotali | int | Pomodori totali assegnati/stimati |
+| pomodoroCompletati| int | Somma dei pomodori completati |
+| pomodoroDatterino | int | Pomodori da 25 min completati |
+| pomodoroSanMarzano| int | Pomodori da 50 min completati |
+| pomodoroCuoreDiBue| int | Pomodori da 100 min completati |
+| completata | bool | Stato di completamento indipendente |
 
 ## Funzionalità
 
 ### Gestione Corsi
 - Visualizzazione elenco con ricerca per nome
-- Filtri per stato (chip orizzontali)
+- Filtri per stato, anno accademico e tipo di laurea (triennale/magistrale)
 - Creazione, modifica, eliminazione
-- Dettaglio corso con esami associati
+- Dettaglio corso con esami associati e statistiche sul progresso
+- Gestione della lode per esami del corso superati
 
 ### Gestione Esami e Scadenze
-- CRUD completo con associazione a un corso
-- Tipologia (scritto/orale/progetto/consegna)
+- CRUD completo con associazione a un corso specifico
+- Tipologia (scritto/orale/progetto/altro)
+- Peso percentuale per l'incidenza sul voto finale del corso
 - Priorità e stato
-- Voto opzionale, calcolo esami superati
+- Voto finale, calcolo dei punti ponderati e degli esami superati
 
-### Pianificazione e Obiettivi
-- Task con associazione a corso e/o esame
-- Tempo stimato e tempo effettivo (tracciato dal Pomodoro)
-- Data pianificata e scadenza
-- Checkbox completamento inline
-- Filtri per completamento e priorità
+### Pianificazione, Obiettivi e Attività
+- Macro-obiettivi con associazione opzionale a un corso
+- Sotto-attività specifiche per ciascun macro-obiettivo
+- Tracciamento della stima del tempo (pomodori totali) e del tempo di studio effettivo
+- Checkbox di completamento indipendente per ogni singola attività
+- Passaggio automatico dell'obiettivo allo stato "Raggiunto" al completamento di tutte le attività collegate
 
 ### Ricerca e Filtri
 - Ricerca corsi per nome (testo libero)
-- Filtro corsi per stato
-- Filtro obiettivi per completamento e priorità
-- Scadenze imminenti (prossimi 7 giorni)
+- Filtro corsi per stato, semestre, tipo laurea e anno accademico
+- Filtro obiettivi per stato (prefissato/raggiunto) e priorità
+- Scadenze imminenti (prossimi 7 giorni) rilevate automaticamente in base agli esami
 
 ### Dashboard Analytics
-- KPI: corsi totali, esami superati, media voti, task completati
-- Barra progresso ore studio effettive vs pianificate
-- Grafico a torta distribuzione tempo per corso
-- Lista scadenze imminenti
+- KPI: corsi totali inseriti, CFU acquisiti, media ponderata (triennale e magistrale), obiettivi raggiunti
+- Monitoraggio delle ore di studio totali effettuate rispetto a quelle pianificate
+- Grafico ad andamento temporale dei voti degli esami superati
+- Lista delle scadenze e degli esami imminenti per un facile tracciamento
 
 ## Feature Avanzate
 
@@ -209,11 +231,14 @@ Il database SQLite viene creato automaticamente al primo avvio dell'app tramite 
 - FAB per creare task pre-impostati sulla data selezionata
 
 ### 2. Timer Pomodoro
-- Ciclo 25 min studio → 5 min pausa
-- Progresso circolare animato (CustomPainter)
-- Controlli play/pause/reset/skip
-- Salvataggio automatico del tempo studiato nel database
-- Conteggio sessioni e minuti totali nella sessione
+- Tre tipologie di pomodori configurabili ispirate alle varietà di pomodoro italiano:
+  - **Datterino**: 25 min studio → 5 min pausa (breve)
+  - **San Marzano**: 50 min studio → 10 min pausa
+  - **Cuore di Bue**: 100 min studio → 20 min pausa (lunga)
+- Progresso circolare animato e reattivo (CustomPainter)
+- Controlli completi: play/pause/reset/skip/stop
+- Salvataggio automatico del tempo studiato e del tipo di pomodoro nel database locale alla fine o alla sospensione della sessione
+- Visualizzazione del resoconto del tempo e del numero di pomodori completati per ciascun task
 
 ## Librerie Utilizzate
 
@@ -224,7 +249,7 @@ Il database SQLite viene creato automaticamente al primo avvio dell'app tramite 
 | path | ^1.9.1 | Utility per percorsi file |
 | provider | ^6.1.2 | State management (ChangeNotifier) |
 | table_calendar | ^3.2.0 | Widget calendario mensile/settimanale |
-| fl_chart | ^0.70.2 | Grafici (PieChart) per analytics |
+| fl_chart | ^0.70.2 | Grafico ad andamento lineare (LineChart) per i voti degli esami superati |
 | intl | ^0.20.2 | Formattazione date in italiano |
 | uuid | ^4.5.1 | Generazione ID univoci |
 

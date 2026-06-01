@@ -5,7 +5,7 @@ import '../services/corso_repository.dart';
 
 /// Provider per la gestione dello stato dei Corsi.
 ///
-/// Mantiene una cache locale della lista corsi, gestisce filtri e ricerca,
+/// Mantiene una copia locale della lista corsi, gestisce filtri e ricerca,
 /// e notifica i listener ad ogni cambiamento.
 class CorsoProvider extends ChangeNotifier {
   final CorsoRepository _repository = CorsoRepository();
@@ -27,10 +27,7 @@ class CorsoProvider extends ChangeNotifier {
   List<Corso> get corsi {
     var result = _corsi;
     if (_searchQuery.isNotEmpty) {
-      result = result
-          .where((c) =>
-              c.nome.toLowerCase().contains(_searchQuery.toLowerCase()))
-          .toList();
+      result = result.where((c) => c.nome.toLowerCase().contains(_searchQuery.toLowerCase())).toList();
     }
     if (_filtroStato.isNotEmpty) {
       result = result.where((c) => _filtroStato.contains(c.stato)).toList();
@@ -39,8 +36,7 @@ class CorsoProvider extends ChangeNotifier {
       result = result.where((c) => _filtroSemestre.contains(c.semestre)).toList();
     }
     if (_filtroTipoLaurea.isNotEmpty) {
-      result =
-          result.where((c) => _filtroTipoLaurea.contains(c.tipoLaurea)).toList();
+      result = result.where((c) => _filtroTipoLaurea.contains(c.tipoLaurea)).toList();
     }
     if (_filtroAnno.isNotEmpty) {
       result = result.where((c) => _filtroAnno.contains(c.anno)).toList();

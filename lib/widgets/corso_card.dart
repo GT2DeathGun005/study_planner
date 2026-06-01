@@ -100,8 +100,10 @@ class CorsoCard extends StatelessWidget {
                           color: color.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(10),
                         ),
-                        child: Icon(_statoIcon(corso.stato),
-                            color: color, size: 20),
+                        child: Icon(
+                          _statoIcon(corso.stato),
+                          color: color, 
+                          size: 20),
                       ),
                       const SizedBox(width: 12),
                       Expanded(
@@ -150,7 +152,7 @@ class CorsoCard extends StatelessWidget {
                       const SizedBox(width: 8),
                       _InfoChip(
                         icon: Icons.workspace_premium,
-                    label: '${Corso.tipoLaureaLabel(corso.tipoLaurea)[0]}${corso.anno}',
+                        label: '${Corso.tipoLaureaLabel(corso.tipoLaurea)[0]}${corso.anno}',
                       ),
                       const Spacer(),
                       Container(

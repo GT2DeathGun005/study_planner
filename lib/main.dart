@@ -13,7 +13,7 @@ import 'screens/home_screen.dart';
 import 'services/database_helper.dart';
 
 
-/// Entry point dell'applicazione Study Planner & Exam Tracker.
+/// Entry point dell'applicazione Pantone Planner.
 ///
 /// Inizializza il database SQLite (con FFI su desktop),
 /// configura i Provider e avvia l'app con tema Material 3.
@@ -33,11 +33,11 @@ void main() async {
   // Inizializza le date in italiano per intl/table_calendar
   await initializeDateFormatting('it_IT', null);
 
-  runApp(const StudyPlannerApp());
+  runApp(const PantonePlannerApp());
 }
 
-class StudyPlannerApp extends StatelessWidget {
-  const StudyPlannerApp({super.key});
+class PantonePlannerApp extends StatelessWidget {
+  const PantonePlannerApp({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -49,7 +49,7 @@ class StudyPlannerApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => AttivitaProvider()),
       ],
       child: MaterialApp(
-        title: 'Study Planner',
+        title: 'Pantone Planner',
         debugShowCheckedModeBanner: false,
         // Localizzazione in italiano
         localizationsDelegates: const [

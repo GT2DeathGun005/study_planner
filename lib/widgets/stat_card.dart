@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 /// Card per visualizzare una statistica/KPI nella dashboard.
 ///
 /// Mostra un'icona, un valore numerico e una label descrittiva
-/// con un colore di accento configurabile.
+/// con un colore configurabile.
 class StatCard extends StatelessWidget {
   final IconData icon;
   final String value;
@@ -32,7 +32,7 @@ class StatCard extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+          child: [
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(

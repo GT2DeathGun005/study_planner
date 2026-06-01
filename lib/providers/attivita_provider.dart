@@ -35,9 +35,7 @@ class AttivitaProvider extends ChangeNotifier {
   int get pomodoroTotali =>
       _attivita.fold(0, (sum, a) => sum + a.pomodoroTotali);
 
-  /// True se tutte le attività dell'obiettivo sono completate.
-  bool get tutteCompletate =>
-      _attivita.isNotEmpty && _attivita.every((a) => a.completata);
+
 
   // ---------- Statistiche globali ----------
 
@@ -124,12 +122,7 @@ class AttivitaProvider extends ChangeNotifier {
     await _verificaStatoObiettivo(obiettivoId);
   }
 
-  /// Elimina tutte le attività di un obiettivo.
-  Future<void> deleteAttivitaByObiettivo(String obiettivoId) async {
-    await _repository.deleteByObiettivoId(obiettivoId);
-    await _refreshAll(obiettivoId);
-    await _verificaStatoObiettivo(obiettivoId);
-  }
+
 
   /// Toggle completamento di un'attività e verifica stato obiettivo.
   Future<void> toggleCompletata(String id) async {

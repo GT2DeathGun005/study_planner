@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../models/attivita.dart';
 import '../../providers/attivita_provider.dart';
@@ -127,6 +128,7 @@ class _PomodoroScreenState extends State<PomodoroScreen> {
   }
 
   void _onTimerComplete() {
+    SystemSound.play(SystemSoundType.alert);
     if (!_isBreak) {
       // Fine sessione di studio
       _sessionsCompleted++;

@@ -157,11 +157,7 @@ class ObiettivoProvider extends ChangeNotifier {
     await loadObiettivi();
   }
 
-  /// Aggiorna lo stato di un obiettivo.
-  Future<void> setStato(String id, String stato) async {
-    await _repository.updateStato(id, stato);
-    await loadObiettivi();
-  }
+
 
   /// Recupera obiettivi pianificati per una data (per il calendario).
   List<Obiettivo> getObiettiviByDate(DateTime date) {

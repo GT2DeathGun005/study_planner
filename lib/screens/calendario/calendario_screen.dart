@@ -63,7 +63,7 @@ class _CalendarioScreenState extends State<CalendarioScreen> {
                 locale: 'it_IT',
                 startingDayOfWeek: StartingDayOfWeek.monday,
                 firstDay: DateTime(2020),
-                lastDay: DateTime(2030),
+                lastDay: DateTime(DateTime.now().year + 4, DateTime.now().month, DateTime.now().day),
                 focusedDay: _focusedDay,
                 calendarFormat: _calendarFormat,
                 selectedDayPredicate: (day) => isSameDay(_selectedDay, day),

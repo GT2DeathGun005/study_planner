@@ -3,10 +3,9 @@ import 'package:provider/provider.dart';
 import '../../models/attivita.dart';
 import '../../providers/attivita_provider.dart';
 
+///
 /// Form per creare o modificare un'Attività.
 ///
-/// Campi: Titolo (obbligatorio) → Numero pomodori → Descrizione.
-/// La priorità è ereditata dall'obiettivo padre (mostrata ma non modificabile).
 class AttivitaFormScreen extends StatefulWidget {
   final String obiettivoId;
   final Attivita? attivita;
@@ -94,7 +93,7 @@ class _AttivitaFormScreenState extends State<AttivitaFormScreen> {
               ),
               const SizedBox(height: 16),
 
-              // 3. Descrizione (in fondo)
+              // 3. Descrizione
               TextFormField(
                 controller: _descrCtrl,
                 decoration: const InputDecoration(

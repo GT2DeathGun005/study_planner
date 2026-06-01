@@ -5,7 +5,7 @@ import '../services/esame_repository.dart';
 
 /// Provider per la gestione dello stato degli Esami.
 ///
-/// Mantiene la cache degli esami e offre filtri per data, corso e stato.
+/// Mantiene una copia locale degli esami e offre filtri per data, corso e stato.
 /// Fornisce anche il calcolo del voto ponderato per corso.
 class EsameProvider extends ChangeNotifier {
   final EsameRepository _repository = EsameRepository();
@@ -22,10 +22,10 @@ class EsameProvider extends ChangeNotifier {
       _esami.where((e) => e.stato == 'programmato').toList()
         ..sort((a, b) => a.data.compareTo(b.data));
 
-  /// Esami completati (superati).
+  /// Esami superati.
   List<Esame> get esamiSuperati => _esami.where((e) => e.superato).toList();
 
-  /// Scadenze imminenti (prossimi 7 giorni, non completati).
+  /// Esami imminenti (prossimi 7 giorni, non completati).
   List<Esame> get scadenzeImminenti {
     final now = DateTime.now();
     final limit = now.add(const Duration(days: 7));
@@ -38,17 +38,9 @@ class EsameProvider extends ChangeNotifier {
       ..sort((a, b) => a.data.compareTo(b.data));
   }
 
-  /// Media dei voti degli esami superati (media semplice).
-  double get mediaVoti {
-    final superati = esamiSuperati;
-    if (superati.isEmpty) return 0;
-    final somma = superati.fold<int>(0, (sum, e) => sum + (e.voto ?? 0));
-    return somma / superati.length;
-  }
 
   /// Calcola il voto ponderato di un corso basato sui suoi esami completati.
-  /// Il voto è la somma dei punti ponderati: Σ(voto × pesoPercentuale / 100).
-  /// Es: esame1 = 30 × 60% = 18, esame2 = 27 × 40% = 10.8 → totale = 28.8
+  /// Il voto ponderato è la somma dei punti ponderati: Σ(voto × pesoPercentuale / 100).
   double calcolaVotoCorso(String corsoId) {
     final esamiCorso = _esami
         .where((e) => e.corsoId == corsoId && e.stato == 'completato' && e.voto != null)
@@ -58,7 +50,7 @@ class EsameProvider extends ChangeNotifier {
   }
 
   /// Restituisce la percentuale totale già assegnata per un corso.
-  /// Esclude l'esame con [excludeEsameId] (utile in modifica).
+  /// Esclude l'esame con [excludeEsameId] per la modifica.
   double getPercentualeTotale(String corsoId, {String? excludeEsameId}) {
     return _esami
         .where((e) =>
@@ -68,7 +60,7 @@ class EsameProvider extends ChangeNotifier {
   }
 
   /// Restituisce la percentuale disponibile per un nuovo esame di un corso.
-  /// Esclude l'esame con [excludeEsameId] (utile in modifica).
+  /// Esclude l'esame con [excludeEsameId] per la modifica.
   double getPercentualeDisponibile(String corsoId,
       {String? excludeEsameId}) {
     final usata = getPercentualeTotale(corsoId, excludeEsameId: excludeEsameId);
@@ -91,10 +83,6 @@ class EsameProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Recupera esami per un corso specifico.
-  Future<List<Esame>> getEsamiByCorso(String corsoId) async {
-    return await _repository.getByCorsoId(corsoId);
-  }
 
   /// Inserisce un nuovo esame.
   Future<void> addEsame({
@@ -138,27 +126,12 @@ class EsameProvider extends ChangeNotifier {
     await loadEsami();
   }
 
-  /// Restituisce esami per un intervallo di date (per il calendario).
+  /// Restituisce esami per un intervallo di date per il calendario.
   List<Esame> getEsamiByDate(DateTime date) {
     return _esami.where((e) {
       return e.data.year == date.year &&
           e.data.month == date.month &&
           e.data.day == date.day;
     }).toList();
-  }
-
-  /// Media voti ponderata per un tipo di laurea specifico.
-  /// Filtra gli esami dei corsi appartenenti al tipo di laurea indicato,
-  /// calcolando la media semplice dei voti degli esami superati.
-  double mediaVotiPerTipoLaurea(String tipoLaurea, List<String> corsoIds) {
-    final esamiFiltrati = _esami
-        .where((e) =>
-            corsoIds.contains(e.corsoId) &&
-            e.superato)
-        .toList();
-    if (esamiFiltrati.isEmpty) return 0;
-    final somma =
-        esamiFiltrati.fold<int>(0, (sum, e) => sum + (e.voto ?? 0));
-    return somma / esamiFiltrati.length;
   }
 }

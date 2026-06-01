@@ -128,10 +128,15 @@ class _ObiettivoFormScreenState extends State<ObiettivoFormScreen> {
                   ),
                 ),
                 onTap: () async {
+                  final now = DateTime.now();
+                  final today = DateTime(now.year, now.month, now.day);
+                  final initial = _dataPianificata ?? today;
+                  final first = initial.isBefore(today) ? initial : today;
+                  
                   final d = await showDatePicker(
                     context: context,
-                    initialDate: _dataPianificata ?? DateTime.now(),
-                    firstDate: DateTime(2020),
+                    initialDate: initial,
+                    firstDate: first,
                     lastDate: DateTime(2030),
                     locale: const Locale('it', 'IT'),
                   );
