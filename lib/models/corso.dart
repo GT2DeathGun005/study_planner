@@ -48,7 +48,7 @@ class Corso {
     'magistrale',
   ];
 
-  /// Label leggibile per lo stato.
+  /// Label per lo stato.
   static String statoLabel(String stato) {
     switch (stato) {
       case 'da_iniziare':
@@ -66,7 +66,7 @@ class Corso {
     }
   }
 
-  /// Label leggibile per il tipo di laurea.
+  /// Label per il tipo di laurea.
   static String tipoLaureaLabel(String tipo) {
     switch (tipo) {
       case 'triennale':

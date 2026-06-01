@@ -218,7 +218,7 @@ class CorsoCard extends StatelessWidget {
       ),
     );
 
-    // Swipe to reveal delete
+    // Swipe per eliminare
     if (onDelete != null) {
       return Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),

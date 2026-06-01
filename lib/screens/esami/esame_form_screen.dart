@@ -7,8 +7,8 @@ import '../../providers/esame_provider.dart';
 
 /// Schermata per creare o modificare un Esame.
 ///
-/// Il [corsoId] è obbligatorio e determina il corso associato.
-/// Se viene passato un [esame] esistente, pre-compila i campi per la modifica.
+/// Il corsoId è obbligatorio e determina il corso associato.
+/// Se viene passato un esame esistente, pre-compila i campi per la modifica.
 /// Un esame completato non è modificabile.
 class EsameFormScreen extends StatefulWidget {
   final Esame? esame;
@@ -462,7 +462,7 @@ class _EsameFormScreenState extends State<EsameFormScreen> {
     final voto = int.tryParse(_votoController.text);
     final peso = int.tryParse(_pesoController.text) ?? 100;
 
-    // --- CONTROLLO MEDIA FINALE >= 18 ---
+    // controllo media finale >= 18
     if (_stato == 'completato' && voto != null) {
       final usataAltri = esameProv.getPercentualeTotale(_corsoId, excludeEsameId: widget.esame?.id);
       final pesoTotaleFuturo = usataAltri + peso;
@@ -491,8 +491,6 @@ class _EsameFormScreenState extends State<EsameFormScreen> {
         }
       }
     }
-    // --- FINE CONTROLLO ---
-
 
     if (isEditing) {
       final updated = widget.esame!.copyWith(
